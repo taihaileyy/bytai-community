@@ -20,8 +20,11 @@ with no Mac, Xcode or Android Studio needed.
 
 ## 1. Run it from your iPad (GitHub Codespaces + Expo Go)
 
-You need: your iPad (Safari), your iPhone, and the free **Expo Go** app on the
-iPhone ([App Store](https://apps.apple.com/app/expo-go/id982107779)).
+You need: your iPad (Safari), your iPhone, the free **Expo Go** app on the
+iPhone ([App Store](https://apps.apple.com/app/expo-go/id982107779)), and a
+free **Expo account** ([expo.dev/signup](https://expo.dev/signup)). Expo Go
+only opens tunneled projects when the **same Expo account** is signed in on
+the Codespace and on the phone.
 
 ### One-time setup
 
@@ -31,6 +34,16 @@ iPhone ([App Store](https://apps.apple.com/app/expo-go/id982107779)).
 4. Wait for the editor to open. The first start runs `npm install`
    automatically (see `.devcontainer/devcontainer.json`). It takes a few
    minutes; you'll see the terminal finish with "added … packages".
+5. Sign in to Expo in the Codespace terminal (once per Codespace):
+
+   ```bash
+   npx expo login
+   ```
+
+   Type your Expo username/email and password (the password stays invisible
+   while typing). It should say "Logged in as …".
+6. On the iPhone, open Expo Go → profile icon → sign in with the **same**
+   Expo account.
 
 ### Every time you want to test on your iPhone
 
@@ -45,7 +58,9 @@ iPhone ([App Store](https://apps.apple.com/app/expo-go/id982107779)).
    line like `› Metro waiting on exp://xxxx-anonymous-8081.exp.direct`.
 
 2. On the **iPhone**, open the **Camera** app and point it at the QR code on
-   your iPad screen. Tap the **"Open in Expo Go"** banner.
+   your iPad screen. Tap the **"Open in Expo Go"** banner. (When you're signed
+   in on both sides, the project also appears in Expo Go under
+   **Development servers**, so you can just tap it.)
    - No QR? Open Expo Go, tap **Enter URL manually**, and type the
      `exp://….exp.direct` address from the terminal.
 3. The first load bundles the app (~30–60 s). After that, every file you save
@@ -62,6 +77,8 @@ the phone, because that's what clients see.
 
 | Problem | Fix |
 |---|---|
+| Expo Go: "You need to be signed in to Expo Go and Expo CLI" | Run `npx expo login` in the Codespace and sign in to Expo Go with the same account, then restart `npm run tunnel`. |
+| Terminal shows "ERROR … React Native DevTools … libnspr4.so" | Harmless. The desktop debugger can't open in a Codespace; the app and Expo Go are unaffected. |
 | Expo Go says the project needs a newer/older SDK | Update Expo Go from the App Store. This app uses SDK 57. |
 | `npm run tunnel` hangs or says "ngrok tunnel took too long" | Press `Ctrl+C` and run it again. Tunnels occasionally fail to start. |
 | "Port 8081 is being used" | Answer **Y** to use another port, or close the old terminal running Expo. |
