@@ -1,0 +1,17 @@
+{
+  "name": "ByTAI Community (Expo)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [8081],
+  "portsAttributes": {
+    "8081": { "label": "Expo dev server (web preview)", "onAutoForward": "notify" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["expo.vscode-expo-tools"]
+    },
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  }
+}

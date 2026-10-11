@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "ByTAI Community",
+    "slug": "bytai-community",
+    "scheme": "bytaicommunity",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F4F1E8",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.builtbytai.community"
+    },
+    "android": {
+      "package": "com.builtbytai.community",
+      "adaptiveIcon": {
+        "backgroundColor": "#131310",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#131310"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
