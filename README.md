@@ -14,7 +14,7 @@ with no Mac, Xcode or Android Studio needed.
 - **No custom native code:** every dependency ships inside Expo Go.
 - **Data:** realistic sample data in `src/data/seed.ts`, saved on the phone
   (AsyncStorage) so changes survive a reload. Reset any time from
-  **Me → Reset demo data**.
+  **Profile → Reset demo data**.
 
 ---
 
@@ -107,13 +107,13 @@ npm run doctor      # Expo's project health check
    add a guest with **+**, **RSVP** → confirmation with a check-in code.
 4. **Give** — choose Monthly, type a custom amount, pick a fund →
    **Continue** → clearly labeled **demo checkout** → thank-you screen.
-5. **Me** — profile, enrolled programs, registered events, giving history and
+5. **Profile** — profile, enrolled programs, registered events, giving history and
    notifications (new ones appeared for each action above).
 6. **Admin** — sign out, sign in as **Avery Brooks (admin)**. Show the
    dashboard charts, expand a member, filter donations, **create an event**
    and **post an announcement**, then go back to the member app: the new event
    and announcement are already on Home.
-7. **Me → Reset demo data** before the next meeting.
+7. **Profile → Reset demo data** before the next meeting.
 
 ---
 
@@ -126,7 +126,7 @@ npm run doctor      # Expo's project health check
 ├── src/
 │   ├── app/                 # Screens. Every file is a route (Expo Router)
 │   │   ├── _layout.tsx      # Fonts, splash, data provider, root stack
-│   │   ├── (tabs)/          # Home · Programs · Events · Give · Me
+│   │   ├── (tabs)/          # Home · Programs · Events · Give · Profile
 │   │   ├── program/[id].tsx # Program detail + enroll
 │   │   ├── event/[id].tsx   # Event detail + RSVP
 │   │   ├── checkout.tsx     # Simulated checkout (modal)
@@ -134,19 +134,31 @@ npm run doctor      # Expo's project health check
 │   │   ├── sign-in.tsx      # Demo sign-in (modal)
 │   │   ├── notifications.tsx, announcements.tsx, donations.tsx
 │   │   └── admin/           # Separate dark-themed admin console
-│   ├── components/          # UI kit (ui.tsx), cards & charts (domain.tsx), motion
-│   ├── data/                # Types (types.ts) and fictional seed data (seed.ts)
+│   ├── components/          # UI kit (ui.tsx), cards & charts (domain.tsx), TabBar, Photo, motion
+│   ├── data/                # Types, fictional seed data, photo library (photos.ts)
 │   ├── services/            # auth.ts, payments.ts, storage.ts (swap points)
 │   ├── store/               # App state: reducer + React context + hooks
-│   ├── theme/               # Colors, fonts, spacing; light app / dark admin
+│   ├── theme/               # Colors, type, spacing, radius, elevation tokens
 │   └── utils/               # Formatting and dialogs
 └── docs/BACKEND.md          # How to add Supabase + real payments later
 ```
 
-**Design system:** Fraunces headlines, Work Sans body, IBM Plex Mono labels
-(the builtbyTAI type set). The member app uses a warm paper palette with
-muted greens; the admin console uses the dark builtbyTAI palette so it feels
-like a separate tool.
+**Design system** (`src/theme/index.ts`, `src/components/ui.tsx`): warm
+off-white canvas, charcoal type and one deep-emerald accent used sparingly
+(selection, progress, key confirmations). Plus Jakarta Sans for headings,
+Inter for reading. Large-title screens, inset grouped lists, hairline
+dividers, a minimal custom tab bar, parallax photo headers on detail pages,
+and subtle motion (fade-ins, press feedback, sliding segmented control,
+count-up stats, animated progress). Everything has accessibility labels and
+roles, and text scales with the phone's font-size setting.
+
+**Photography** (`src/data/photos.ts`): 22 photos from
+[Unsplash](https://unsplash.com/license) (free to use), loaded from Unsplash's
+image CDN with `expo-image`. Each has alt text and a blurhash, so a soft
+color preview appears instantly and fills in when the photo arrives (the
+phone needs internet). To use a client's real photos later, point the entries
+in `photos.ts` at bundled images or Supabase Storage. Admins pick a cover
+photo when creating an event.
 
 **How data flows:** screens never touch storage. They call hooks/actions from
 `src/store/AppStore.tsx`, which go through `src/services/*`. Replacing the

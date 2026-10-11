@@ -1,24 +1,26 @@
 import React from 'react';
+import { View } from 'react-native';
 import { useStore } from '@/store/AppStore';
 import { FadeIn } from '@/components/Motion';
-import { AppHeader, EmptyState, FocusStatusBar, Screen } from '@/components/ui';
-import { AnnouncementCard } from '@/components/domain';
+import { Divider, EmptyState, Screen } from '@/components/ui';
+import { AnnouncementItem } from '@/components/domain';
 
 export default function Announcements() {
   const { state } = useStore();
   const list = [...state.announcements].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.date.localeCompare(a.date));
   return (
-    <Screen header={<AppHeader title="Announcements" />}>
-      <FocusStatusBar style="dark" />
+    <Screen title="News">
       {list.length ? (
         list.map((a, i) => (
-          <FadeIn key={a.id} delay={i * 50}>
-            <AnnouncementCard item={a} />
+          <FadeIn key={a.id} delay={Math.min(i, 6) * 40}>
+            {i > 0 ? <Divider /> : null}
+            <AnnouncementItem item={a} lines={0} />
           </FadeIn>
         ))
       ) : (
-        <EmptyState icon="megaphone-outline" title="No announcements" body="News from the team will show up here." />
+        <EmptyState icon="megaphone-outline" title="No news yet" body="Updates from the team will show up here." />
       )}
+      <View style={{ height: 8 }} />
     </Screen>
   );
 }

@@ -3,6 +3,8 @@
  * (see docs/BACKEND.md), so swapping the local store for a real backend
  * doesn't change any screen code.
  */
+import type { PhotoKey } from './photos';
+
 export type ID = string;
 
 export type ProgramCategory = 'Food' | 'Youth' | 'Learning' | 'Wellness' | 'Housing';
@@ -20,6 +22,7 @@ export interface Program {
   enrolled: number;
   lead: string;
   icon: string; // Ionicons glyph name
+  photo: PhotoKey;
   featured: boolean;
   outcomes: string[];
 }
@@ -38,6 +41,7 @@ export interface CommunityEvent {
   capacity: number;
   attending: number;
   host: string;
+  photo: PhotoKey;
   featured: boolean;
   cancelled?: boolean;
 }

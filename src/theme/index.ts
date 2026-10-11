@@ -1,112 +1,61 @@
 /**
  * ByTAI Community design tokens.
- * Member app = warm "paper" light theme. Admin console = the dark builtbyTAI
- * palette, so the two interfaces feel clearly separate.
+ *
+ * Direction: warm off-white canvas, charcoal type, one deep-emerald accent
+ * used sparingly (progress, selection, key confirmations). Photography and
+ * typography carry the personality; color stays quiet.
  */
-export const palette = {
-  ink: '#16150F',
-  night: '#131310',
-  night2: '#1B1A15',
-  night3: '#24221A',
-  nightBorder: '#33301F',
-  cream: '#F1EEE4',
-  paper: '#F4F1E8',
-  paper2: '#ECE7D9',
-  card: '#FFFDF7',
-  stone: '#6B6553',
-  stoneLight: '#A69E8C',
-  line: '#E2DBC8',
-  green: '#2F7A63',
-  greenDeep: '#1F5745',
-  mint: '#6FBBA1',
-  mintBright: '#8ED0B8',
-  mintSoft: '#DCEDE4',
-  gold: '#C9A24A',
-  goldSoft: '#F3E7C7',
-  clay: '#C4674F',
-  claySoft: '#F5DED6',
-  sky: '#4F7FA8',
-  skySoft: '#DCE7F1',
+export const color = {
+  bg: '#F7F6F3',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F0EEE9',
+  sunken: '#E9E6E0',
+  ink: '#18181A',
+  ink2: '#3D3D42',
+  muted: '#6A6A70', // ≥ 4.5:1 on bg and surface
+  faint: '#A3A3A8', // decorative only
+  line: '#E6E3DD',
+  lineStrong: '#D6D2CA',
+  accent: '#13795B', // 5.4:1 on white
+  accentPressed: '#0E5F47',
+  accentSoft: '#E4F1EC',
+  danger: '#B4441F',
+  dangerSoft: '#FBEDE6',
+  warn: '#8A5A12',
+  warnSoft: '#F8EEDB',
   white: '#FFFFFF',
+  black: '#000000',
+  scrim: 'rgba(12,12,14,0.62)',
 } as const;
 
-export type ColorScheme = {
-  bg: string;
-  surface: string;
-  surface2: string;
-  ink: string;
-  muted: string;
-  border: string;
-  accent: string;
-  accentInk: string;
-  accentSoft: string;
-};
-
-export const light: ColorScheme = {
-  bg: palette.paper,
-  surface: palette.card,
-  surface2: palette.paper2,
-  ink: palette.ink,
-  muted: palette.stone,
-  border: palette.line,
-  accent: palette.green,
-  accentInk: palette.white,
-  accentSoft: palette.mintSoft,
-};
-
-export const dark: ColorScheme = {
-  bg: palette.night,
-  surface: palette.night2,
-  surface2: palette.night3,
-  ink: palette.cream,
-  muted: palette.stoneLight,
-  border: palette.nightBorder,
-  accent: palette.mint,
-  accentInk: palette.night,
-  accentSoft: '#22382F',
-};
-
-export const fonts = {
-  display: 'Fraunces_600SemiBold',
-  displayItalic: 'Fraunces_500Medium_Italic',
-  body: 'WorkSans_400Regular',
-  medium: 'WorkSans_500Medium',
-  semibold: 'WorkSans_600SemiBold',
-  mono: 'IBMPlexMono_500Medium',
+export const font = {
+  display: 'PlusJakartaSans_700Bold',
+  displayHeavy: 'PlusJakartaSans_800ExtraBold',
+  displaySemi: 'PlusJakartaSans_600SemiBold',
+  text: 'Inter_400Regular',
+  textMedium: 'Inter_500Medium',
+  textSemi: 'Inter_600SemiBold',
 } as const;
 
-export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 40 } as const;
-export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
+export const space = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, x3: 32, x4: 40, x5: 56 } as const;
+export const radius = { xs: 8, sm: 10, md: 14, lg: 18, xl: 24, xxl: 32, pill: 999 } as const;
+export const gutter = 20;
 
-export const shadow = {
-  card: {
-    shadowColor: '#2A2414',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+export const elevation = {
+  soft: {
+    shadowColor: '#1B1A16',
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
-  lifted: {
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
+  float: {
+    shadowColor: '#1B1A16',
+    shadowOpacity: 0.12,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
 } as const;
 
-/** Category accent colors used by programs and events. */
-export const categoryColors: Record<string, { fg: string; bg: string }> = {
-  Food: { fg: palette.clay, bg: palette.claySoft },
-  Youth: { fg: palette.sky, bg: palette.skySoft },
-  Learning: { fg: palette.green, bg: palette.mintSoft },
-  Wellness: { fg: '#8A6BB0', bg: '#ECE4F5' },
-  Housing: { fg: '#A0782A', bg: palette.goldSoft },
-  Volunteer: { fg: palette.green, bg: palette.mintSoft },
-  Fundraiser: { fg: '#A0782A', bg: palette.goldSoft },
-  Workshop: { fg: palette.sky, bg: palette.skySoft },
-  Community: { fg: palette.clay, bg: palette.claySoft },
-};
-
-export const getCategoryColor = (c: string) =>
-  categoryColors[c] ?? { fg: palette.green, bg: palette.mintSoft };
+export const motion = { fast: 160, base: 240, slow: 420 } as const;

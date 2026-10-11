@@ -3,9 +3,10 @@ import { View } from 'react-native';
 import { useStore, useMyActivity, useSession } from '@/store/AppStore';
 import type { ProgramCategory } from '@/data/types';
 import { FadeIn } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Chip, ChipRow, EmptyState, FocusStatusBar, PageTitle, Screen, SearchField } from '@/components/ui';
-import { ProgramRowCard } from '@/components/domain';
+import { T } from '@/components/Text';
+import { Chip, ChipRow, EmptyState, LargeTitleScreen, SearchField } from '@/components/ui';
+import { ProgramListItem } from '@/components/domain';
+import { gutter } from '@/theme';
 
 const CATEGORIES: ('All' | ProgramCategory)[] = ['All', 'Food', 'Youth', 'Learning', 'Wellness', 'Housing'];
 
@@ -27,24 +28,28 @@ export default function Programs() {
     );
   }, [state.programs, query, cat, mine, isEnrolled]);
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: state.programs.length };
+    state.programs.forEach((p) => (c[p.category] = (c[p.category] ?? 0) + 1));
+    return c;
+  }, [state.programs]);
+
   return (
-    <Screen>
-      <FocusStatusBar style="dark" />
-      <PageTitle eyebrow="Programs" title="Find your place" subtitle="Free programs for every age, run by neighbors who care." />
-      <SearchField value={query} onChangeText={setQuery} placeholder="Search programs, places, topics" />
-      <ChipRow>
-        {signedIn ? <Chip label={`Mine (${enrollments.length})`} icon="bookmark" selected={mine} onPress={() => setMine(!mine)} /> : null}
+    <LargeTitleScreen title="Programs" subtitle="Free programs for every age, run by neighbors.">
+      <SearchField value={query} onChangeText={setQuery} placeholder="Search programs" />
+      <ChipRow style={{ marginTop: 14 }}>
+        {signedIn ? <Chip label="My programs" icon="bookmark-outline" count={enrollments.length} selected={mine} onPress={() => setMine(!mine)} /> : null}
         {CATEGORIES.map((c) => (
-          <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
+          <Chip key={c} label={c} count={counts[c] ?? 0} selected={cat === c} onPress={() => setCat(c)} />
         ))}
       </ChipRow>
-      <Txt variant="caption" muted style={{ marginTop: 16, marginBottom: 10 }}>
+      <T v="caption" muted style={{ marginHorizontal: gutter, marginTop: 20, marginBottom: 14 }} accessibilityLiveRegion="polite">
         {list.length} program{list.length === 1 ? '' : 's'}
-      </Txt>
+      </T>
       {list.length ? (
         list.map((p, i) => (
-          <FadeIn key={p.id} delay={i * 50}>
-            <ProgramRowCard program={p} enrolled={!!isEnrolled(p.id)} />
+          <FadeIn key={p.id} delay={Math.min(i, 4) * 60}>
+            <ProgramListItem program={p} enrolled={!!isEnrolled(p.id)} />
           </FadeIn>
         ))
       ) : (
@@ -61,6 +66,6 @@ export default function Programs() {
         />
       )}
       <View style={{ height: 8 }} />
-    </Screen>
+    </LargeTitleScreen>
   );
 }

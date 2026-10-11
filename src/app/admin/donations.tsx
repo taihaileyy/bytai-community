@@ -1,76 +1,60 @@
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useStore } from '@/store/AppStore';
+import { gutter } from '@/theme';
 import { money } from '@/utils/format';
-import { Txt } from '@/components/Txt';
-import { Card, Chip, ChipRow, Divider, FocusStatusBar, Row, Screen, Segmented } from '@/components/ui';
-import { DonationRow } from '@/components/domain';
-import { AdminHeader } from '@/components/admin';
 import { DONATION_FUNDS } from '@/data/seed';
+import { T } from '@/components/Text';
+import { Button, Chip, ChipRow, Group, Segmented } from '@/components/ui';
+import { DonationRow, Stat, StatStrip } from '@/components/domain';
+import { AdminScreen, Panel } from '@/components/admin';
 
 type Freq = 'all' | 'one-time' | 'monthly';
 
 export default function AdminDonations() {
   const { state } = useStore();
   const [freq, setFreq] = useState<Freq>('all');
-  const [fund, setFund] = useState<string>('All funds');
-  const [limit, setLimit] = useState(20);
-
-  const list = useMemo(
-    () => state.donations.filter((d) => (freq === 'all' || d.frequency === freq) && (fund === 'All funds' || d.fund === fund)),
-    [state.donations, freq, fund],
-  );
+  const [fund, setFund] = useState('All funds');
+  const [limit, setLimit] = useState(15);
+  const list = useMemo(() => state.donations.filter((d) => (freq === 'all' || d.frequency === freq) && (fund === 'All funds' || d.fund === fund)), [state.donations, freq, fund]);
   const total = list.reduce((s, d) => s + d.amount, 0);
-  const avg = list.length ? total / list.length : 0;
 
   return (
-    <Screen header={<AdminHeader title="Donations" eyebrow="Fundraising" />}>
-      <FocusStatusBar style="light" />
-      <Segmented
-        options={[
-          { value: 'all', label: 'All' },
-          { value: 'one-time', label: 'One-time' },
-          { value: 'monthly', label: 'Monthly' },
-        ]}
-        value={freq}
-        onChange={setFreq}
-      />
-      <View style={{ height: 12 }} />
-      <ChipRow>
+    <AdminScreen title="Donations" eyebrow="Fundraising">
+      <View style={{ paddingHorizontal: gutter }}>
+        <Segmented
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'one-time', label: 'One-time' },
+            { value: 'monthly', label: 'Monthly' },
+          ]}
+          value={freq}
+          onChange={setFreq}
+        />
+      </View>
+      <ChipRow style={{ marginTop: 12 }}>
         {['All funds', ...DONATION_FUNDS].map((f) => (
           <Chip key={f} label={f} selected={fund === f} onPress={() => setFund(f)} />
         ))}
       </ChipRow>
-      <Row gap={10} style={{ marginTop: 16 }}>
-        {[
-          ['Total', money(total)],
-          ['Gifts', String(list.length)],
-          ['Average', money(Math.round(avg))],
-        ].map(([k, v]) => (
-          <Card key={k} flat style={{ flex: 1, padding: 14 }}>
-            <Txt variant="caption" muted>
-              {k}
-            </Txt>
-            <Txt variant="heading" style={{ marginTop: 4 }}>
-              {v}
-            </Txt>
-          </Card>
+      <Panel style={{ marginTop: 18 }}>
+        <StatStrip>
+          <Stat value={total} prefix="$" label="Total" />
+          <Stat value={list.length} label="Gifts" />
+          <Stat value={list.length ? Math.round(total / list.length) : 0} prefix="$" label="Average" />
+        </StatStrip>
+      </Panel>
+      <Group style={{ marginTop: 14 }}>
+        {list.slice(0, limit).map((d) => (
+          <DonationRow key={d.id} d={d} showDonor />
         ))}
-      </Row>
-      <Card style={{ marginTop: 14, paddingVertical: 4 }} flat>
-        {list.slice(0, limit).map((d, i) => (
-          <View key={d.id}>
-            {i > 0 ? <Divider /> : null}
-            <DonationRow d={d} showDonor />
-          </View>
-        ))}
-      </Card>
+      </Group>
       {limit < list.length ? (
-        <Chip label={`Show ${Math.min(20, list.length - limit)} more`} onPress={() => setLimit(limit + 20)} />
+        <Button title={`Show ${Math.min(15, list.length - limit)} more`} variant="tertiary" onPress={() => setLimit(limit + 15)} style={{ marginTop: 6 }} />
       ) : null}
-      <Txt variant="caption" muted center style={{ marginTop: 14 }}>
-        Simulated donations · no real payments
-      </Txt>
-    </Screen>
+      <T v="caption" muted center style={{ marginTop: 12 }}>
+        Simulated donations · {money(state.donations.reduce((s, d) => s + d.amount, 0))} recorded in total
+      </T>
+    </AdminScreen>
   );
 }

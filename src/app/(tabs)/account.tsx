@@ -1,21 +1,22 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ORG } from '@/data/seed';
 import { useActions, useMyActivity, useSession, useStore } from '@/store/AppStore';
-import { palette, radius, space } from '@/theme';
-import { longDate, money, relative, shortDate } from '@/utils/format';
+import { color, gutter, radius } from '@/theme';
+import { longDate, money, relative, time } from '@/utils/format';
 import { confirmAction } from '@/utils/confirm';
 import { FadeIn } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Avatar, Button, Card, Divider, EmptyState, FocusStatusBar, ListRow, PageTitle, Row, Screen, SectionHeader, type IconName } from '@/components/ui';
+import { Photo } from '@/components/Photo';
+import { T } from '@/components/Text';
+import { Avatar, Button, DemoBadge, FocusStatusBar, Group, LargeTitleScreen, ListItem, Row, SectionHeader, Tag, type IconName } from '@/components/ui';
+import { Stat, StatStrip } from '@/components/domain';
 
 export default function Account() {
   const { state } = useStore();
   const { member, isAdmin } = useSession();
-  const { enrollments, registrations, donations, notifications, unread } = useMyActivity();
+  const { enrollments, registrations, donations, unread, notifications } = useMyActivity();
   const actions = useActions();
 
   if (!member) return <SignedOut />;
@@ -27,191 +28,160 @@ export default function Account() {
     .sort((a, b) => a.ev!.date.localeCompare(b.ev!.date));
   const given = donations.reduce((s, d) => s + d.amount, 0);
 
-  const stats: { label: string; value: string }[] = [
-    { label: 'Programs', value: String(myPrograms.length) },
-    { label: 'Events', value: String(myEvents.length) },
-    { label: 'Given', value: money(given) },
-    { label: 'Vol. hours', value: String(member.volunteerHours) },
-  ];
-
   return (
-    <Screen>
-      <FocusStatusBar style="dark" />
-      <PageTitle eyebrow="Member portal" title="My account" />
-
+    <LargeTitleScreen title="Profile">
       <FadeIn>
-        <LinearGradient colors={[palette.night, palette.greenDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.profile}>
-          <Row gap={14}>
-            <Avatar name={member.name} color={palette.green} size={58} />
-            <View style={{ flex: 1 }}>
-              <Txt variant="title" color={palette.cream}>
-                {member.name}
-              </Txt>
-              <Txt variant="caption" color="rgba(241,238,228,0.7)">
-                {member.email}
-              </Txt>
-              <Row gap={6} style={{ marginTop: 6 }}>
-                <Ionicons name="location-outline" size={13} color={palette.mintBright} />
-                <Txt variant="caption" color={palette.mintBright}>
-                  {member.neighborhood} · Member since {new Date(member.joined).getFullYear()}
-                </Txt>
-              </Row>
-            </View>
-          </Row>
-          <View style={styles.stats}>
-            {stats.map((s, i) => (
-              <View key={s.label} style={[styles.stat, i > 0 && styles.statBorder]}>
-                <Txt variant="heading" color={palette.cream}>
-                  {s.value}
-                </Txt>
-                <Txt variant="caption" color="rgba(241,238,228,0.6)" style={{ fontSize: 11 }}>
-                  {s.label}
-                </Txt>
-              </View>
-            ))}
+        <Row gap={16} style={{ paddingHorizontal: gutter }}>
+          <Avatar name={member.name} size={64} tone="dark" />
+          <View style={{ flex: 1 }}>
+            <T v="title2">{member.name}</T>
+            <T v="callout" muted numberOfLines={1}>
+              {member.email}
+            </T>
+            <Row gap={6} style={{ marginTop: 6 }}>
+              <Tag label={isAdmin ? 'Admin' : 'Member'} tone={isAdmin ? 'dark' : 'accent'} />
+              <T v="caption" muted>
+                {member.neighborhood} · since {new Date(member.joined).getFullYear()}
+              </T>
+            </Row>
           </View>
-        </LinearGradient>
+        </Row>
+        <View style={styles.stats}>
+          <StatStrip>
+            <Stat value={myPrograms.length} label="Programs" />
+            <Stat value={myEvents.length} label="Events" />
+            <Stat value={given} prefix="$" label="Given" />
+            <Stat value={member.volunteerHours} label="Hours" />
+          </StatStrip>
+        </View>
       </FadeIn>
 
       {isAdmin ? (
-        <Card onPress={() => router.push('/admin')} style={{ marginTop: 14, backgroundColor: palette.ink, borderColor: palette.ink }}>
-          <Row gap={14}>
-            <View style={styles.adminIcon}>
-              <Ionicons name="speedometer" size={22} color={palette.night} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Txt variant="heading" color={palette.cream}>
-                Open admin console
-              </Txt>
-              <Txt variant="caption" color="rgba(241,238,228,0.65)">
-                Members, donations, events and analytics
-              </Txt>
-            </View>
-            <Ionicons name="arrow-forward" size={20} color={palette.mintBright} />
-          </Row>
-        </Card>
+        <Group style={{ marginTop: 20 }}>
+          <ListItem icon="speedometer-outline" title="Admin console" subtitle="Members, donations, events, analytics" onPress={() => router.push('/admin')} />
+        </Group>
       ) : null}
 
-      <Card onPress={() => router.push('/notifications')} style={{ marginTop: 14 }}>
-        <Row gap={14}>
-          <View style={styles.bell}>
-            <Ionicons name="notifications" size={20} color={palette.green} />
-            {unread ? <View style={styles.bellDot} /> : null}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Txt variant="heading">Notifications</Txt>
-            <Txt variant="caption" muted>
-              {unread ? `${unread} unread · ${notifications[0] ? relative(notifications[0].date) : ''}` : 'You’re all caught up'}
-            </Txt>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={palette.stone} />
-        </Row>
-      </Card>
+      <Group style={{ marginTop: isAdmin ? 12 : 20 }}>
+        <ListItem
+          icon="notifications-outline"
+          title="Notifications"
+          subtitle={unread ? `${unread} new · ${notifications[0] ? relative(notifications[0].date) : ''}` : 'You’re all caught up'}
+          onPress={() => router.push('/notifications')}
+          trailing={unread ? <View style={styles.count}><T v="caption" c={color.white} style={{ fontSize: 11 }}>{unread}</T></View> : undefined}
+        />
+      </Group>
 
-      <SectionHeader eyebrow="Enrolled" title="My programs" action={myPrograms.length ? 'Browse' : undefined} onAction={() => router.push('/programs')} />
-      <Card style={{ paddingVertical: 4 }}>
+      <SectionHeader title="My programs" action="Browse" onAction={() => router.push('/programs')} />
+      <Group>
         {myPrograms.length ? (
-          myPrograms.map(({ e, p }, i) => (
-            <View key={e.id}>
-              {i > 0 ? <Divider /> : null}
-              <ListRow
-                icon={p!.icon as IconName}
-                title={p!.title}
-                subtitle={`${e.status === 'waitlist' ? 'Waitlist · ' : ''}${p!.schedule}`}
-                onPress={() => router.push(`/program/${p!.id}`)}
-              />
-            </View>
+          myPrograms.map(({ e, p }) => (
+            <ListItem
+              key={e.id}
+              leading={<Photo photo={p!.photo} width={160} style={styles.thumb} decorative />}
+              title={p!.title}
+              subtitle={`${e.status === 'waitlist' ? 'Waitlist · ' : ''}${p!.schedule}`}
+              onPress={() => router.push(`/program/${p!.id}`)}
+            />
           ))
         ) : (
-          <EmptyState icon="school-outline" title="No programs yet" body="Find a program that fits your family." action="Explore programs" onAction={() => router.push('/programs')} />
+          <ListItem icon="compass-outline" title="Find a program" subtitle="Classes, clubs and services near you" onPress={() => router.push('/programs')} />
         )}
-      </Card>
+      </Group>
 
-      <SectionHeader eyebrow="Registered" title="My events" action={myEvents.length ? 'Calendar' : undefined} onAction={() => router.push('/events')} />
-      <Card style={{ paddingVertical: 4 }}>
+      <SectionHeader title="My events" action="Calendar" onAction={() => router.push('/events')} />
+      <Group>
         {myEvents.length ? (
-          myEvents.map(({ r, ev }, i) => (
-            <View key={r.id}>
-              {i > 0 ? <Divider /> : null}
-              <ListRow
-                icon={ev!.cancelled ? 'close-circle-outline' : 'calendar-outline'}
-                iconColor={ev!.cancelled ? palette.clay : undefined}
-                iconBg={ev!.cancelled ? palette.claySoft : undefined}
-                title={ev!.title}
-                subtitle={`${ev!.cancelled ? 'Cancelled · ' : ''}${longDate(ev!.date)} · ${r.confirmation}${r.guests ? ` · +${r.guests}` : ''}`}
-                onPress={() => router.push(`/event/${ev!.id}`)}
-              />
-            </View>
+          myEvents.map(({ r, ev }) => (
+            <ListItem
+              key={r.id}
+              leading={<Photo photo={ev!.photo} width={160} style={styles.thumb} decorative />}
+              title={ev!.title}
+              subtitle={`${ev!.cancelled ? 'Cancelled · ' : ''}${longDate(ev!.date)} · ${time(ev!.date)}${r.guests ? ` · +${r.guests}` : ''}`}
+              onPress={() => router.push(`/event/${ev!.id}`)}
+            />
           ))
         ) : (
-          <EmptyState icon="calendar-outline" title="No RSVPs yet" body="Volunteer days, workshops and celebrations are waiting." action="See events" onAction={() => router.push('/events')} />
+          <ListItem icon="calendar-clear-outline" title="RSVP to an event" subtitle="Volunteer days, workshops and celebrations" onPress={() => router.push('/events')} />
         )}
-      </Card>
+      </Group>
 
-      <SectionHeader eyebrow="Giving" title="Recent gifts" action="History" onAction={() => router.push('/donations')} />
-      <Card style={{ paddingVertical: 4 }}>
-        {donations.slice(0, 2).map((d, i) => (
-          <View key={d.id}>
-            {i > 0 ? <Divider /> : null}
-            <ListRow icon={d.frequency === 'monthly' ? 'repeat' : 'heart'} title={`${money(d.amount)} · ${d.fund}`} subtitle={`${shortDate(d.date)} · ${d.receipt}`} />
-          </View>
-        ))}
-        {!donations.length ? <ListRow icon="heart-outline" title="No gifts yet" subtitle="Make your first gift on the Give tab" onPress={() => router.push('/give')} /> : null}
-      </Card>
+      <SectionHeader title="Giving" />
+      <Group>
+        <ListItem icon="heart-outline" title="Giving history" value={money(given)} onPress={() => router.push('/donations')} />
+        <ListItem icon="add-circle-outline" title="Make a gift" onPress={() => router.navigate('/give')} />
+      </Group>
 
-      <SectionHeader title="Settings" />
-      <Card style={{ paddingVertical: 4 }}>
-        <ListRow icon="refresh" title="Reset demo data" subtitle="Restore the original sample data" iconColor="#A0782A" iconBg={palette.goldSoft} onPress={() => confirmAction('Reset demo data?', 'All enrollments, RSVPs, gifts and admin changes from this session will be cleared.', actions.resetDemo, 'Reset')} />
-        <Divider />
-        <ListRow icon="log-out-outline" title="Sign out" iconColor={palette.clay} iconBg={palette.claySoft} onPress={actions.signOut} />
-      </Card>
+      <Group style={{ marginTop: 28 }} title="Demo">
+        <ListItem
+          icon="refresh-outline"
+          title="Reset demo data"
+          subtitle="Restore the original sample data"
+          onPress={() => confirmAction('Reset demo data?', 'All enrollments, RSVPs, gifts and admin changes from this session will be cleared.', actions.resetDemo, 'Reset')}
+        />
+        <ListItem icon="log-out-outline" title="Sign out" destructive onPress={actions.signOut} />
+      </Group>
 
-      <Txt variant="caption" muted center style={{ marginTop: 28 }}>
-        ByTAI Community · Portfolio demo by builtbyTAI{'\n'}Sample data for {ORG.name} (fictional)
-      </Txt>
-    </Screen>
+      <T v="caption" muted center style={{ marginTop: 28, paddingHorizontal: 40 }}>
+        ByTAI Community · a builtbyTAI portfolio prototype{'\n'}Sample data for {ORG.name} (fictional)
+      </T>
+    </LargeTitleScreen>
   );
 }
 
 function SignedOut() {
+  const insets = useSafeAreaInsets();
   const perks: { icon: IconName; title: string; body: string }[] = [
-    { icon: 'school-outline', title: 'Enroll in programs', body: 'Save your spot in classes, clubs and services.' },
-    { icon: 'calendar-outline', title: 'RSVP to events', body: 'Get reminders and a check-in code.' },
-    { icon: 'heart-outline', title: 'Track your giving', body: 'Receipts and monthly gifts in one place.' },
-    { icon: 'notifications-outline', title: 'Stay in the loop', body: 'Updates from the programs you care about.' },
+    { icon: 'compass-outline', title: 'Enroll in programs', body: 'Save your spot in classes, clubs and services' },
+    { icon: 'calendar-clear-outline', title: 'RSVP to events', body: 'Reminders and a check-in code' },
+    { icon: 'heart-outline', title: 'Track your giving', body: 'Receipts and monthly gifts in one place' },
   ];
   return (
-    <Screen>
-      <FocusStatusBar style="dark" />
-      <PageTitle eyebrow="Member portal" title="Welcome, neighbor" subtitle="Sign in to manage your programs, events and gifts." />
-      <Card>
-        {perks.map((p, i) => (
-          <View key={p.title}>
-            {i > 0 ? <Divider /> : null}
-            <ListRow icon={p.icon} title={p.title} subtitle={p.body} />
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <FocusStatusBar style="light" />
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <Photo photo="campfire" width={1200} scrim={0.8} style={{ height: 380 }}>
+          <View style={{ position: 'absolute', top: insets.top + 10, left: gutter }}>
+            <DemoBadge onImage />
           </View>
-        ))}
-      </Card>
-      <Button title="Sign in to the demo" icon="log-in-outline" style={{ marginTop: 22 }} onPress={() => router.push('/sign-in')} />
-      <Txt variant="caption" muted center style={{ marginTop: 12 }}>
-        Uses a fictional sample account — no personal information needed.
-      </Txt>
-    </Screen>
+          <View style={{ position: 'absolute', left: gutter, right: gutter, bottom: 28 }}>
+            <T v="overline" c="rgba(255,255,255,0.8)">
+              Member portal
+            </T>
+            <T v="largeTitle" c={color.white} style={{ marginTop: 6 }} accessibilityRole="header">
+              Welcome, neighbor.
+            </T>
+            <T v="callout" c="rgba(255,255,255,0.82)" style={{ marginTop: 6 }}>
+              Sign in to manage your programs, events and gifts.
+            </T>
+          </View>
+        </Photo>
+        <Group style={{ marginTop: 20 }}>
+          {perks.map((p) => (
+            <ListItem key={p.title} icon={p.icon} title={p.title} subtitle={p.body} />
+          ))}
+        </Group>
+        <View style={{ paddingHorizontal: gutter, marginTop: 22 }}>
+          <Button title="Sign in" onPress={() => router.push('/sign-in')} />
+          <T v="caption" muted center style={{ marginTop: 12 }}>
+            Uses a fictional sample account — no personal information needed.
+          </T>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  profile: { borderRadius: radius.xl, padding: space.xl },
   stats: {
-    flexDirection: 'row',
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(241,238,228,0.2)',
+    marginHorizontal: gutter,
+    marginTop: 22,
+    padding: 16,
+    borderRadius: radius.lg,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
   },
-  stat: { flex: 1, alignItems: 'center' },
-  statBorder: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: 'rgba(241,238,228,0.2)' },
-  adminIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: palette.mintBright, alignItems: 'center', justifyContent: 'center' },
-  bell: { width: 44, height: 44, borderRadius: 14, backgroundColor: palette.mintSoft, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 10, right: 11, width: 9, height: 9, borderRadius: 5, backgroundColor: palette.clay, borderWidth: 2, borderColor: palette.mintSoft },
+  thumb: { width: 44, height: 44, borderRadius: 10 },
+  count: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: color.danger, alignItems: 'center', justifyContent: 'center' },
 });

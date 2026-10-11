@@ -1,32 +1,30 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ORG } from '@/data/seed';
 import { useImpact, useMyActivity, useSession, useStore } from '@/store/AppStore';
-import { palette, radius, space } from '@/theme';
-import { greeting } from '@/utils/format';
+import { color, gutter, radius } from '@/theme';
+import { greeting, money } from '@/utils/format';
 import { FadeIn, PressScale } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Avatar, Card, DemoPill, FocusStatusBar, IconButton, Row, SectionHeader, type IconName } from '@/components/ui';
-import { AnnouncementCard, EventCard, ProgramFeatureCard, StatTile } from '@/components/domain';
+import { Photo } from '@/components/Photo';
+import { T } from '@/components/Text';
+import { Avatar, Button, DemoBadge, Divider, FocusStatusBar, IconButton, Progress, Row, SectionHeader } from '@/components/ui';
+import { AnnouncementItem, EventRow, InitiativeCard, Stat, StatStrip } from '@/components/domain';
 
-const QUICK: { icon: IconName; label: string; href: string; color: string; bg: string }[] = [
-  { icon: 'heart', label: 'Give', href: '/give', color: palette.clay, bg: palette.claySoft },
-  { icon: 'hand-left', label: 'Volunteer', href: '/events?filter=Volunteer', color: palette.green, bg: palette.mintSoft },
-  { icon: 'school', label: 'Programs', href: '/programs', color: palette.sky, bg: palette.skySoft },
-  { icon: 'megaphone', label: 'News', href: '/announcements', color: '#A0782A', bg: palette.goldSoft },
-];
+const MATCH_GOAL = 25000;
 
 export default function Home() {
   const insets = useSafeAreaInsets();
+  const { height: screenH } = useWindowDimensions();
   const { state } = useStore();
   const { member } = useSession();
   const { unread, isEnrolled, isRegistered } = useMyActivity();
   const impact = useImpact();
+  const y = useRef(new Animated.Value(0)).current;
 
+  const heroH = Math.min(560, Math.max(460, screenH * 0.62));
   const featured = state.programs.filter((p) => p.featured);
   const upcoming = useMemo(
     () =>
@@ -40,195 +38,197 @@ export default function Home() {
     () => [...state.announcements].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.date.localeCompare(a.date)).slice(0, 2),
     [state.announcements],
   );
+  const matched = useMemo(() => {
+    const since = Date.now() - 60 * 86400000;
+    return Math.min(MATCH_GOAL, 17_600 + state.donations.filter((d) => new Date(d.date).getTime() > since).reduce((s, d) => s + d.amount, 0));
+  }, [state.donations]);
   const firstName = member?.name.split(' ')[0];
 
+  // Hero parallax + top bar that turns solid once the hero scrolls away.
+  const heroTranslate = y.interpolate({ inputRange: [-200, 0, heroH], outputRange: [-100, 0, heroH * 0.45], extrapolate: 'clamp' });
+  const heroScale = y.interpolate({ inputRange: [-200, 0], outputRange: [1.35, 1], extrapolate: 'clamp' });
+  const barBg = y.interpolate({ inputRange: [heroH - 140, heroH - 90], outputRange: [0, 1], extrapolate: 'clamp' });
+  // Once the hero is gone the bar turns light, so flip status bar + controls to dark.
+  const [solid, setSolid] = useState(false);
+  useEffect(() => {
+    const id = y.addListener(({ value }) => setSolid(value > heroH - 110));
+    return () => y.removeListener(id);
+  }, [y, heroH]);
+
   return (
-    <View style={{ flex: 1, backgroundColor: palette.paper }}>
-      <FocusStatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <FocusStatusBar style={solid ? 'dark' : 'light'} />
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y } } }], { useNativeDriver: true })}
+        contentContainerStyle={{ paddingBottom: 56 }}
+      >
         {/* Hero */}
-        <LinearGradient
-          colors={[palette.night, '#1A2620', palette.greenDeep]}
-          locations={[0, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, { paddingTop: insets.top + 12 }]}
-        >
-          <Row style={{ justifyContent: 'space-between' }}>
-            <DemoPill inverse />
-            <Row gap={10}>
-              <IconButton
-                icon="notifications-outline"
-                tone="inverse"
-                label="Notifications"
-                badge={unread}
-                onPress={() => router.push(member ? '/notifications' : '/sign-in')}
-              />
-              <PressScale onPress={() => router.push('/account')} accessibilityLabel="Your account">
-                {member ? (
-                  <Avatar name={member.name} color={member.avatarColor} size={40} />
-                ) : (
-                  <View style={styles.guestAvatar}>
-                    <Ionicons name="person" size={18} color={palette.cream} />
-                  </View>
-                )}
-              </PressScale>
-            </Row>
-          </Row>
-
-          <FadeIn delay={60}>
-            <Txt variant="eyebrow" color={palette.mintBright} style={{ marginTop: 28 }}>
-              {ORG.name}
-            </Txt>
-            <Txt variant="hero" color={palette.cream} style={{ marginTop: 10 }}>
-              {greeting()},{'\n'}
-              {firstName ?? 'neighbor'}.
-            </Txt>
-          </FadeIn>
-
-          <FadeIn delay={160}>
-            <View style={styles.mission}>
-              <View style={styles.missionRule} />
-              <Txt variant="body" italic color="rgba(241,238,228,0.88)" style={{ flex: 1, fontSize: 16.5, lineHeight: 24 }}>
+        <View style={{ height: heroH, overflow: 'hidden' }}>
+          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroTranslate }, { scale: heroScale }] }]}>
+            <Photo photo="hero" width={1400} scrim={0.82} scrimTop style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <View style={[styles.heroContent, { paddingBottom: 28 }]}>
+            <FadeIn delay={80}>
+              <T v="subhead" c="rgba(255,255,255,0.85)">
+                {greeting()}
+                {firstName ? `, ${firstName}` : ''}
+              </T>
+              <T v="hero" c={color.white} style={{ marginTop: 8 }} accessibilityRole="header">
+                Neighbors helping{'\n'}neighbors thrive.
+              </T>
+              <T v="callout" c="rgba(255,255,255,0.82)" style={{ marginTop: 10, maxWidth: 320 }}>
                 {ORG.mission}
-              </Txt>
-            </View>
-          </FadeIn>
-
-          <FadeIn delay={260}>
-            <Txt variant="eyebrow" color="rgba(241,238,228,0.6)" style={{ marginTop: 28, marginBottom: 12 }}>
-              Our impact this year
-            </Txt>
-            <View style={styles.statGrid}>
-              <StatTile tone="dark" icon="home-outline" value={impact.familiesServed} label="Families served" delta="+12%" />
-              <StatTile tone="dark" icon="restaurant-outline" value={impact.mealsShared} label="Meals shared" delta="+8%" />
-              <StatTile tone="dark" icon="time-outline" value={impact.volunteerHours} label="Volunteer hours" />
-              <StatTile tone="dark" icon="cash-outline" prefix="$" value={impact.raisedThisYear} label="Raised for programs" />
-            </View>
-          </FadeIn>
-        </LinearGradient>
-
-        <View style={{ paddingHorizontal: space.xl }}>
-          {/* Quick actions */}
-          <FadeIn delay={320}>
-            <Card style={styles.quickCard}>
-              {QUICK.map((q) => (
-                <PressScale key={q.label} haptic onPress={() => router.push(q.href as never)} style={styles.quickItem} accessibilityRole="button">
-                  <View style={[styles.quickIcon, { backgroundColor: q.bg }]}>
-                    <Ionicons name={q.icon} size={21} color={q.color} />
-                  </View>
-                  <Txt variant="caption" style={{ marginTop: 7, fontSize: 12 }}>
-                    {q.label}
-                  </Txt>
-                </PressScale>
-              ))}
-            </Card>
-          </FadeIn>
-
-          {/* Featured programs */}
-          <SectionHeader eyebrow="Featured" title="Programs for you" action="All programs" onAction={() => router.push('/programs')} />
+              </T>
+            </FadeIn>
+            <FadeIn delay={200}>
+              <Row gap={10} style={{ marginTop: 22 }}>
+                <Button title="Get involved" variant="light" iconRight="arrow-forward" onPress={() => router.push('/programs')} style={{ flex: 1 }} />
+                <Button title="Donate" variant="accent" icon="heart" onPress={() => router.push('/give')} style={{ flex: 0.8 }} />
+              </Row>
+            </FadeIn>
+          </View>
         </View>
+
+        {/* Compact impact stats */}
+        <FadeIn delay={260} style={styles.impact}>
+          <Row style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+            <T v="overline" muted>
+              Impact this year
+            </T>
+            <T v="caption" muted>
+              {ORG.name}
+            </T>
+          </Row>
+          <StatStrip>
+            <Stat value={impact.familiesServed} label="Families served" />
+            <Stat value={impact.mealsShared} label="Meals shared" compactNum />
+            <Stat value={impact.volunteerHours} label="Volunteer hrs" compactNum />
+          </StatStrip>
+        </FadeIn>
+
+        {/* Featured initiatives */}
+        <SectionHeader title="Featured initiatives" action="See all" onAction={() => router.push('/programs')} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          snapToInterval={280}
+          snapToInterval={276}
           decelerationRate="fast"
-          contentContainerStyle={{ paddingHorizontal: space.xl, gap: 12, paddingTop: 4, paddingBottom: 28 }}
+          contentContainerStyle={{ paddingHorizontal: gutter, gap: 12 }}
         >
           {featured.map((p, i) => (
-            <FadeIn key={p.id} delay={380 + i * 80} distance={20}>
-              <ProgramFeatureCard program={p} index={i} enrolled={!!isEnrolled(p.id)} />
+            <FadeIn key={p.id} delay={300 + i * 70} distance={16}>
+              <InitiativeCard program={p} enrolled={!!isEnrolled(p.id)} />
             </FadeIn>
           ))}
         </ScrollView>
 
-        <View style={{ paddingHorizontal: space.xl }}>
-          <SectionHeader eyebrow="Mark your calendar" title="Upcoming events" action="Calendar" onAction={() => router.push('/events')} style={{ marginTop: 18 }} />
+        {/* Upcoming events */}
+        <SectionHeader title="Upcoming events" action="Calendar" onAction={() => router.push('/events')} />
+        <View>
           {upcoming.map((e, i) => (
-            <FadeIn key={e.id} delay={i * 70}>
-              <EventCard event={e} registered={!!isRegistered(e.id)} />
-            </FadeIn>
+            <View key={e.id}>
+              {i > 0 ? <Divider inset={gutter + 98} /> : null}
+              <EventRow event={e} registered={!!isRegistered(e.id)} />
+            </View>
           ))}
-
-          <SectionHeader eyebrow="From the team" title="Announcements" action="See all" onAction={() => router.push('/announcements')} />
-          {announcements.map((a) => (
-            <AnnouncementCard key={a.id} item={a} compact />
-          ))}
-
-          {/* Donate CTA */}
-          <PressScale onPress={() => router.push('/give')} accessibilityRole="button" style={{ marginTop: 18 }}>
-            <LinearGradient colors={[palette.green, palette.greenDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cta}>
-              <View style={{ flex: 1 }}>
-                <Txt variant="eyebrow" color={palette.mintBright}>
-                  Matching gift active
-                </Txt>
-                <Txt variant="title" color={palette.cream} style={{ marginTop: 8 }}>
-                  Your gift goes twice as far this season.
-                </Txt>
-              </View>
-              <View style={styles.ctaArrow}>
-                <Ionicons name="arrow-forward" size={20} color={palette.night} />
-              </View>
-            </LinearGradient>
-          </PressScale>
-
-          {/* Portfolio footer */}
-          <View style={styles.footer}>
-            <Txt variant="eyebrow" muted center>
-              Portfolio prototype
-            </Txt>
-            <Txt variant="caption" muted center style={{ marginTop: 6, maxWidth: 300 }}>
-              ByTAI Community is a demo app designed and built by builtbyTAI — Tailored Automation & Integrations. All
-              people, organizations and numbers are fictional.
-            </Txt>
-          </View>
         </View>
-      </ScrollView>
+
+        {/* Matching gift */}
+        <PressScale onPress={() => router.push('/give')} scaleTo={0.985} accessibilityRole="button" accessibilityLabel={`Matching gift: ${money(matched)} of ${money(MATCH_GOAL)} matched. Give now.`} style={{ marginHorizontal: gutter, marginTop: 36 }}>
+          <Photo photo="butterfly" width={1000} scrim={0.85} style={styles.give}>
+            <View style={styles.giveBody}>
+              <T v="overline" c="rgba(255,255,255,0.8)">
+                Matching gift · Ends Dec 31
+              </T>
+              <T v="title1" c={color.white} style={{ marginTop: 6 }}>
+                Your gift goes twice as far.
+              </T>
+              <View style={{ marginTop: 14 }}>
+                <Progress value={matched / MATCH_GOAL} tone="light" height={4} />
+              </View>
+              <Row style={{ justifyContent: 'space-between', marginTop: 8 }}>
+                <T v="caption" c="rgba(255,255,255,0.85)" tabular>
+                  {money(matched)} of {money(MATCH_GOAL)} matched
+                </T>
+                <Row gap={4}>
+                  <T v="subhead" c={color.white}>
+                    Give now
+                  </T>
+                  <Ionicons name="arrow-forward" size={14} color={color.white} />
+                </Row>
+              </Row>
+            </View>
+          </Photo>
+        </PressScale>
+
+        {/* Announcements */}
+        <SectionHeader title="From the team" action="All news" onAction={() => router.push('/announcements')} />
+        <View style={{ paddingHorizontal: gutter }}>
+          {announcements.map((a, i) => (
+            <View key={a.id}>
+              {i > 0 ? <Divider /> : null}
+              <AnnouncementItem item={a} />
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.footer}>
+          <DemoBadge />
+          <T v="caption" muted center style={{ marginTop: 10, maxWidth: 290 }}>
+            A portfolio prototype designed and built by builtbyTAI — Tailored Automation & Integrations. People,
+            organizations and numbers are fictional.
+          </T>
+        </View>
+      </Animated.ScrollView>
+
+      {/* Floating top bar over the hero */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 6 }]} pointerEvents="box-none">
+        <Animated.View style={[StyleSheet.absoluteFill, styles.topBarBg, { opacity: barBg }]} pointerEvents="none" />
+        <DemoBadge onImage={!solid} />
+        <Row gap={10}>
+          <IconButton icon="notifications-outline" tone={solid ? 'plain' : 'dark'} label="Notifications" badge={unread} onPress={() => router.push(member ? '/notifications' : '/sign-in')} />
+          <PressScale onPress={() => router.push(member ? '/account' : '/sign-in')} accessibilityRole="button" accessibilityLabel={member ? 'Your profile' : 'Sign in'}>
+            {member ? (
+              <View style={styles.avatarRing}>
+                <Avatar name={member.name} size={36} tone="dark" />
+              </View>
+            ) : (
+              <IconButton icon="person-outline" tone={solid ? 'plain' : 'dark'} label="Sign in" onPress={() => router.push('/sign-in')} />
+            )}
+          </PressScale>
+        </Row>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    paddingHorizontal: space.xl,
-    paddingBottom: 60,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  guestAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(241,238,228,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mission: { flexDirection: 'row', gap: 14, marginTop: 18 },
-  missionRule: { width: 3, borderRadius: 2, backgroundColor: palette.mint },
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  quickCard: {
-    marginTop: -36,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-  },
-  quickItem: { flex: 1, alignItems: 'center' },
-  quickIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  cta: {
+  heroContent: { position: 'absolute', left: gutter, right: gutter, bottom: 0 },
+  impact: {
+    marginHorizontal: gutter,
+    marginTop: 20,
+    padding: 18,
     borderRadius: radius.xl,
-    padding: space.xl,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
+  },
+  give: { height: 230, borderRadius: radius.xl },
+  giveBody: { position: 'absolute', left: 18, right: 18, bottom: 18 },
+  footer: { alignItems: 'center', marginTop: 48, paddingHorizontal: gutter },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: gutter,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'space-between',
   },
-  ctaArrow: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: palette.mintBright,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footer: { alignItems: 'center', marginTop: 36, paddingHorizontal: 10 },
+  topBarBg: { backgroundColor: color.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.line },
+  avatarRing: { padding: 2, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.35)' },
 });

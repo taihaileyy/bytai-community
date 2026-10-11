@@ -3,13 +3,13 @@ import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useMyActivity, useSession, useStore } from '@/store/AppStore';
-import type { EventCategory } from '@/data/types';
-import { palette } from '@/theme';
-import { longDate } from '@/utils/format';
+import type { CommunityEvent, EventCategory } from '@/data/types';
+import { color, font, gutter, radius } from '@/theme';
+import { daysUntil, longDate } from '@/utils/format';
 import { FadeIn, PressScale } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Card, Chip, ChipRow, EmptyState, FocusStatusBar, PageTitle, Row, Screen, Segmented } from '@/components/ui';
-import { EventCard } from '@/components/domain';
+import { T } from '@/components/Text';
+import { Chip, ChipRow, Divider, EmptyState, LargeTitleScreen, Row, Segmented } from '@/components/ui';
+import { EventFeature, EventRow } from '@/components/domain';
 
 const CATS: ('All' | EventCategory)[] = ['All', 'Community', 'Volunteer', 'Workshop', 'Fundraiser'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -34,142 +34,188 @@ export default function Events() {
   }, [params.filter]);
 
   const upcoming = useMemo(
-    () =>
-      state.events
-        .filter((e) => new Date(e.date).getTime() > Date.now() - 6 * 3600_000)
-        .sort((a, b) => a.date.localeCompare(b.date)),
+    () => state.events.filter((e) => new Date(e.date).getTime() > Date.now() - 6 * 3600_000).sort((a, b) => a.date.localeCompare(b.date)),
     [state.events],
   );
-
   const filtered = upcoming.filter((e) => (cat === 'All' || e.category === cat) && (!going || isRegistered(e.id)));
+  const spotlight = cat === 'All' && !going ? filtered.find((e) => e.featured && !e.cancelled) : undefined;
+  const rest = filtered.filter((e) => e !== spotlight);
+  const groups: { title: string; items: CommunityEvent[] }[] = [
+    { title: 'This week', items: rest.filter((e) => daysUntil(e.date) < 7) },
+    { title: 'Later this month', items: rest.filter((e) => daysUntil(e.date) >= 7 && daysUntil(e.date) < 31) },
+    { title: 'Coming up', items: rest.filter((e) => daysUntil(e.date) >= 31) },
+  ].filter((g) => g.items.length);
 
-  // Calendar grid for the visible month.
   const grid = useMemo(() => {
-    const first = new Date(month);
-    const start = first.getDay();
+    const start = new Date(month).getDay();
     const daysIn = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const cells: (Date | null)[] = Array.from({ length: start }, () => null);
     for (let d = 1; d <= daysIn; d++) cells.push(new Date(month.getFullYear(), month.getMonth(), d));
     while (cells.length % 7) cells.push(null);
     return cells;
   }, [month]);
-
   const eventsOn = (d: Date) => upcoming.filter((e) => sameDay(new Date(e.date), d));
-  const dayEvents = day ? eventsOn(day) : upcoming.filter((e) => {
-    const d = new Date(e.date);
-    return d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear();
-  });
+  const dayEvents = day
+    ? eventsOn(day)
+    : upcoming.filter((e) => {
+        const d = new Date(e.date);
+        return d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear();
+      });
   const today = new Date();
+  const shiftMonth = (n: number) => {
+    setDay(null);
+    setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
+  };
 
   return (
-    <Screen>
-      <FocusStatusBar style="dark" />
-      <PageTitle eyebrow="Events" title="What’s happening" subtitle="Volunteer, learn and celebrate with your neighbors." />
-      <Segmented
-        options={[
-          { value: 'list', label: 'Upcoming' },
-          { value: 'calendar', label: 'Calendar' },
-        ]}
-        value={view}
-        onChange={setView}
-      />
+    <LargeTitleScreen title="Events" subtitle="Volunteer, learn and celebrate together.">
+      <View style={{ paddingHorizontal: gutter }}>
+        <Segmented
+          options={[
+            { value: 'list', label: 'Upcoming' },
+            { value: 'calendar', label: 'Calendar' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </View>
 
       {view === 'list' ? (
         <>
-          <View style={{ height: 14 }} />
-          <ChipRow>
-            {signedIn ? <Chip label="I'm going" icon="checkmark-circle" selected={going} onPress={() => setGoing(!going)} /> : null}
+          <ChipRow style={{ marginTop: 16 }}>
+            {signedIn ? <Chip label="Going" icon="checkmark-circle-outline" selected={going} onPress={() => setGoing(!going)} /> : null}
             {CATS.map((c) => (
               <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
             ))}
           </ChipRow>
-          <Txt variant="caption" muted style={{ marginTop: 16, marginBottom: 10 }}>
-            {filtered.length} upcoming event{filtered.length === 1 ? '' : 's'}
-          </Txt>
-          {filtered.length ? (
-            filtered.map((e, i) => (
-              <FadeIn key={e.id} delay={i * 50}>
-                <EventCard event={e} registered={!!isRegistered(e.id)} />
-              </FadeIn>
+
+          {spotlight ? (
+            <FadeIn style={{ marginTop: 22 }}>
+              <EventFeature event={spotlight} registered={!!isRegistered(spotlight.id)} />
+            </FadeIn>
+          ) : null}
+
+          {groups.length ? (
+            groups.map((g) => (
+              <View key={g.title} style={{ marginTop: 26 }}>
+                <T v="overline" muted style={{ marginHorizontal: gutter, marginBottom: 4 }} accessibilityRole="header">
+                  {g.title}
+                </T>
+                {g.items.map((e, i) => (
+                  <FadeIn key={e.id} delay={Math.min(i, 4) * 50}>
+                    {i > 0 ? <Divider inset={gutter + 98} /> : null}
+                    <EventRow event={e} registered={!!isRegistered(e.id)} />
+                  </FadeIn>
+                ))}
+              </View>
             ))
-          ) : (
+          ) : !spotlight ? (
             <EmptyState icon="calendar-outline" title="Nothing here yet" body="No events match these filters." action="Show all events" onAction={() => { setCat('All'); setGoing(false); }} />
-          )}
+          ) : null}
         </>
       ) : (
         <>
-          <Card style={{ marginTop: 16 }}>
-            <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-              <PressScale haptic onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1)); }} accessibilityLabel="Previous month" style={styles.navBtn}>
-                <Ionicons name="chevron-back" size={18} color={palette.ink} />
-              </PressScale>
-              <Txt variant="heading">
-                {MONTHS[month.getMonth()]} {month.getFullYear()}
-              </Txt>
-              <PressScale haptic onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)); }} accessibilityLabel="Next month" style={styles.navBtn}>
-                <Ionicons name="chevron-forward" size={18} color={palette.ink} />
-              </PressScale>
+          <View style={styles.calendar}>
+            <Row style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+              <T v="title3">
+                {MONTHS[month.getMonth()]} <T v="title3" c={color.muted}>{month.getFullYear()}</T>
+              </T>
+              <Row gap={6}>
+                <PressScale haptic onPress={() => shiftMonth(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={styles.navBtn}>
+                  <Ionicons name="chevron-back" size={17} color={color.ink} />
+                </PressScale>
+                <PressScale haptic onPress={() => shiftMonth(1)} accessibilityRole="button" accessibilityLabel="Next month" style={styles.navBtn}>
+                  <Ionicons name="chevron-forward" size={17} color={color.ink} />
+                </PressScale>
+              </Row>
             </Row>
             <View style={styles.week}>
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <Txt key={i} variant="eyebrow" muted style={styles.weekLabel}>
+                <T key={i} v="caption" muted style={styles.weekLabel}>
                   {d}
-                </Txt>
+                </T>
               ))}
             </View>
             <View style={styles.grid}>
               {grid.map((d, i) => {
                 if (!d) return <View key={i} style={styles.cell} />;
                 const evs = eventsOn(d);
-                const selected = day && sameDay(d, day);
+                const selected = !!day && sameDay(d, day);
                 const isToday = sameDay(d, today);
                 const mine = evs.some((e) => isRegistered(e.id));
                 return (
-                  <PressScale key={i} haptic onPress={() => setDay(selected ? null : d)} style={styles.cell} accessibilityLabel={`${d.toDateString()}${evs.length ? `, ${evs.length} events` : ''}`}>
-                    <View style={[styles.dayCircle, isToday && styles.today, selected && styles.selected]}>
-                      <Txt variant="label" color={selected ? palette.cream : isToday ? palette.green : evs.length ? palette.ink : palette.stoneLight}>
+                  <PressScale
+                    key={i}
+                    haptic
+                    scaleTo={0.9}
+                    onPress={() => setDay(selected ? null : d)}
+                    style={styles.cell}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${d.toDateString()}${evs.length ? `, ${evs.length} event${evs.length > 1 ? 's' : ''}` : ''}${mine ? ', you are going' : ''}`}
+                  >
+                    <View style={[styles.day, isToday && styles.today, selected && styles.selected]}>
+                      <T
+                        v="callout"
+                        c={selected ? color.white : evs.length ? color.ink : color.faint}
+                        style={{ fontFamily: evs.length || isToday ? font.textSemi : font.text }}
+                      >
                         {d.getDate()}
-                      </Txt>
+                      </T>
                     </View>
-                    <View style={[styles.dot, { backgroundColor: evs.length ? (mine ? palette.clay : palette.green) : 'transparent' }]} />
+                    <View style={[styles.dot, { backgroundColor: evs.length ? (mine ? color.accent : color.ink) : 'transparent' }]} />
                   </PressScale>
                 );
               })}
             </View>
-            <Row gap={16} style={{ marginTop: 8, justifyContent: 'center' }}>
+            <Row gap={16} style={{ marginTop: 10, justifyContent: 'center' }}>
               <Row gap={6}>
-                <View style={[styles.dot, { backgroundColor: palette.green }]} />
-                <Txt variant="caption" muted>Event</Txt>
+                <View style={[styles.dot, { backgroundColor: color.ink }]} />
+                <T v="caption" muted>Event</T>
               </Row>
               <Row gap={6}>
-                <View style={[styles.dot, { backgroundColor: palette.clay }]} />
-                <Txt variant="caption" muted>You're going</Txt>
+                <View style={[styles.dot, { backgroundColor: color.accent }]} />
+                <T v="caption" muted>You're going</T>
               </Row>
             </Row>
-          </Card>
-          <Txt variant="heading" style={{ marginTop: 22, marginBottom: 12 }}>
+          </View>
+
+          <T v="overline" muted style={{ marginHorizontal: gutter, marginTop: 28, marginBottom: 4 }} accessibilityRole="header" accessibilityLiveRegion="polite">
             {day ? longDate(day.toISOString()) : `All of ${MONTHS[month.getMonth()]}`}
-          </Txt>
+          </T>
           {dayEvents.length ? (
-            dayEvents.map((e) => <EventCard key={e.id} event={e} registered={!!isRegistered(e.id)} />)
+            dayEvents.map((e, i) => (
+              <View key={e.id}>
+                {i > 0 ? <Divider inset={gutter + 98} /> : null}
+                <EventRow event={e} registered={!!isRegistered(e.id)} />
+              </View>
+            ))
           ) : (
-            <EmptyState icon="leaf-outline" title="A quiet day" body="No events scheduled. Pick a day with a dot to see what’s on." />
+            <EmptyState icon="leaf-outline" title="A quiet day" body="No events scheduled. Pick a day with a dot." />
           )}
         </>
       )}
-    </Screen>
+    </LargeTitleScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  navBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.paper2, alignItems: 'center', justifyContent: 'center' },
-  week: { flexDirection: 'row', marginBottom: 6 },
+  calendar: {
+    marginHorizontal: gutter,
+    marginTop: 18,
+    padding: 16,
+    borderRadius: radius.xl,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
+  },
+  navBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: color.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  week: { flexDirection: 'row', marginBottom: 4 },
   weekLabel: { flex: 1, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 3 },
-  dayCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  today: { borderWidth: 1.5, borderColor: palette.green },
-  selected: { backgroundColor: palette.ink, borderColor: palette.ink },
-  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
+  cell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 2 },
+  day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  today: { borderWidth: 1.5, borderColor: color.ink },
+  selected: { backgroundColor: color.ink, borderColor: color.ink },
+  dot: { width: 5, height: 5, borderRadius: 3, marginTop: 1 },
 });
-

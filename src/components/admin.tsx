@@ -1,31 +1,66 @@
 import React from 'react';
-import { View } from 'react-native';
-import { router } from 'expo-router';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { palette, space } from '@/theme';
-import { Txt } from './Txt';
-import { DemoPill, IconButton, Row } from './ui';
+import { color, gutter, radius } from '@/theme';
+import { T } from './Text';
+import { DemoBadge, FocusStatusBar, NavBar, Row } from './ui';
 
-/** Header used across admin screens. */
-export function AdminHeader({ title, eyebrow = 'Admin console', right, root }: { title: string; eyebrow?: string; right?: React.ReactNode; root?: boolean }) {
+/** Shared shell for admin screens: nav bar, "Admin console" overline, large title. */
+export function AdminScreen({
+  title,
+  eyebrow = 'Admin console',
+  right,
+  root,
+  children,
+  bottom,
+}: {
+  title: string;
+  eyebrow?: string;
+  right?: React.ReactNode;
+  root?: boolean;
+  children: React.ReactNode;
+  bottom?: React.ReactNode;
+}) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ paddingTop: insets.top + 8, paddingHorizontal: space.xl, paddingBottom: 14, backgroundColor: palette.night }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <IconButton
-          icon={root ? 'close' : 'chevron-back'}
-          label={root ? 'Exit admin' : 'Back'}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace(root ? '/account' : '/admin'))}
-        />
-        <DemoPill inverse />
-        <View style={{ minWidth: 40, alignItems: 'flex-end' }}>{right}</View>
-      </Row>
-      <Txt variant="eyebrow" accent style={{ marginTop: 18 }}>
-        {eyebrow}
-      </Txt>
-      <Txt variant="display" style={{ marginTop: 6 }}>
-        {title}
-      </Txt>
+    <View style={{ flex: 1, backgroundColor: color.bg }}>
+      <FocusStatusBar style="dark" />
+      <NavBar close={root} right={right ?? <DemoBadge />} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: (bottom ? 120 : 48) + insets.bottom }}
+      >
+        <View style={{ paddingHorizontal: gutter, paddingTop: 4, paddingBottom: 18 }}>
+          <Row gap={6}>
+            <View style={styles.adminDot} />
+            <T v="overline" muted>
+              {eyebrow}
+            </T>
+          </Row>
+          <T v="largeTitle" style={{ marginTop: 6 }} accessibilityRole="header">
+            {title}
+          </T>
+        </View>
+        {children}
+      </ScrollView>
+      {bottom}
     </View>
   );
 }
+
+export function Panel({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.panel, style]}>{children}</View>;
+}
+
+const styles = StyleSheet.create({
+  adminDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.ink },
+  panel: {
+    marginHorizontal: gutter,
+    padding: 18,
+    borderRadius: radius.xl,
+    backgroundColor: color.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.line,
+  },
+});

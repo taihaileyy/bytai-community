@@ -15,7 +15,7 @@ import type {
   Registration,
 } from './types';
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 export const ORG = {
   name: 'Riverbend Community Alliance',
@@ -77,6 +77,7 @@ const programs: Program[] = [
     enrolled: 184,
     lead: 'Marisol Vega',
     icon: 'basket-outline',
+    photo: 'produce',
     featured: true,
     outcomes: ['Weekly fresh produce box', 'Winter home delivery option', 'Seasonal cooking demos'],
   },
@@ -94,6 +95,7 @@ const programs: Program[] = [
     enrolled: 36,
     lead: 'Dr. Kenji Moore',
     icon: 'hardware-chip-outline',
+    photo: 'lego',
     featured: true,
     outcomes: ['Build and program a robot', '1:1 volunteer mentor', 'End-of-season showcase'],
   },
@@ -111,6 +113,7 @@ const programs: Program[] = [
     enrolled: 41,
     lead: 'Elena Petrov',
     icon: 'chatbubbles-outline',
+    photo: 'coffeeSmile',
     featured: false,
     outcomes: ['Small groups of 6–8', 'Free childcare evenings', 'Certificate of participation'],
   },
@@ -128,6 +131,7 @@ const programs: Program[] = [
     enrolled: 22,
     lead: 'Marcus Webb',
     icon: 'briefcase-outline',
+    photo: 'laptop',
     featured: true,
     outcomes: ['Polished résumé', 'Mock interviews', 'Employer meet-and-greet'],
   },
@@ -145,6 +149,7 @@ const programs: Program[] = [
     enrolled: 47,
     lead: 'Nurse Patricia Hale',
     icon: 'heart-outline',
+    photo: 'elder',
     featured: false,
     outcomes: ['Weekly movement class', 'Free health screenings', 'Shared lunch'],
   },
@@ -162,6 +167,7 @@ const programs: Program[] = [
     enrolled: 63,
     lead: 'Jasmine Reed',
     icon: 'book-outline',
+    photo: 'books',
     featured: false,
     outcomes: ['Daily tutor support', 'Healthy snacks', 'Weekly parent updates'],
   },
@@ -179,19 +185,20 @@ const programs: Program[] = [
     enrolled: 19,
     lead: 'Daniel Okafor',
     icon: 'hammer-outline',
+    photo: 'tools',
     featured: false,
     outcomes: ['Free safety assessment', 'Repairs within 30 days', 'Follow-up check-in'],
   },
 ];
 
 const events: CommunityEvent[] = [
-  { id: 'e-harvest', title: 'Fall Harvest Festival', category: 'Community', date: at(6, 11), durationMins: 300, location: 'Riverbend Park Pavilion', address: '200 Riverside Dr.', description: 'Live music, a farmers market, pumpkin carving and free family activities. Bring the whole neighborhood!', capacity: 400, attending: 286, host: 'Riverbend Events Team', featured: true },
-  { id: 'e-gala', title: 'Lights of Riverbend Gala', category: 'Fundraiser', date: at(20, 18, 30), durationMins: 210, location: 'The Grand Foundry', address: '18 Mill Street', description: 'An evening of dinner, stories from our programs and a silent auction. Every dollar raised funds next year’s youth programs.', capacity: 180, attending: 131, host: 'Board of Directors', featured: true },
-  { id: 'e-pack', title: 'Pantry Packing Night', category: 'Volunteer', date: at(3, 17, 30), durationMins: 120, location: 'Riverbend Commons Hall', address: '45 Commons Way', description: 'Help pack 500 grocery boxes for Saturday’s pantry. No experience needed — pizza provided.', capacity: 40, attending: 28, host: 'Marisol Vega', featured: false },
-  { id: 'e-budget', title: 'Family Budgeting 101', category: 'Workshop', date: at(9, 18), durationMins: 90, location: 'Community Center, Room 3', address: '12 Elm Avenue', description: 'A practical, judgment-free workshop on building a household budget and saving for emergencies.', capacity: 35, attending: 17, host: 'Riverbend Credit Union volunteers', featured: false },
-  { id: 'e-cleanup', title: 'Riverside Cleanup Day', category: 'Volunteer', date: at(13, 9), durationMins: 180, location: 'Riverside Trailhead', address: 'Trail Lot B', description: 'Gloves, bags and coffee provided. Help us clear two miles of riverbank before winter.', capacity: 80, attending: 44, host: 'Green Riverbend', featured: false },
-  { id: 'e-showcase', title: 'STEM Lab Showcase Night', category: 'Community', date: at(27, 18), durationMins: 120, location: 'Riverbend Library', address: '300 Library Lane', description: 'Students from Future Builders demo their robots and present community design projects.', capacity: 150, attending: 72, host: 'Future Builders STEM Lab', featured: false },
-  { id: 'e-coat', title: 'Winter Coat Drive', category: 'Volunteer', date: at(34, 10), durationMins: 240, location: 'Riverbend Commons Hall', address: '45 Commons Way', description: 'Sort and distribute donated winter coats, hats and gloves to families across Riverbend.', capacity: 60, attending: 19, host: 'Riverbend Volunteers', featured: false },
+  { id: 'e-harvest', title: 'Fall Harvest Festival', category: 'Community', date: at(6, 11), durationMins: 300, location: 'Riverbend Park Pavilion', address: '200 Riverside Dr.', description: 'Live music, a farmers market, pumpkin carving and free family activities. Bring the whole neighborhood!', capacity: 400, attending: 286, host: 'Riverbend Events Team', photo: 'pumpkins', featured: true },
+  { id: 'e-gala', title: 'Lights of Riverbend Gala', category: 'Fundraiser', date: at(20, 18, 30), durationMins: 210, location: 'The Grand Foundry', address: '18 Mill Street', description: 'An evening of dinner, stories from our programs and a silent auction. Every dollar raised funds next year’s youth programs.', capacity: 180, attending: 131, host: 'Board of Directors', photo: 'lights', featured: true },
+  { id: 'e-pack', title: 'Pantry Packing Night', category: 'Volunteer', date: at(3, 17, 30), durationMins: 120, location: 'Riverbend Commons Hall', address: '45 Commons Way', description: 'Help pack 500 grocery boxes for Saturday’s pantry. No experience needed — pizza provided.', capacity: 40, attending: 28, host: 'Marisol Vega', photo: 'garden', featured: false },
+  { id: 'e-budget', title: 'Family Budgeting 101', category: 'Workshop', date: at(9, 18), durationMins: 90, location: 'Community Center, Room 3', address: '12 Elm Avenue', description: 'A practical, judgment-free workshop on building a household budget and saving for emergencies.', capacity: 35, attending: 17, host: 'Riverbend Credit Union volunteers', photo: 'deskLaptop', featured: false },
+  { id: 'e-cleanup', title: 'Riverside Cleanup Day', category: 'Volunteer', date: at(13, 9), durationMins: 180, location: 'Riverside Trailhead', address: 'Trail Lot B', description: 'Gloves, bags and coffee provided. Help us clear two miles of riverbank before winter.', capacity: 80, attending: 44, host: 'Green Riverbend', photo: 'river', featured: false },
+  { id: 'e-showcase', title: 'STEM Lab Showcase Night', category: 'Community', date: at(27, 18), durationMins: 120, location: 'Riverbend Library', address: '300 Library Lane', description: 'Students from Future Builders demo their robots and present community design projects.', capacity: 150, attending: 72, host: 'Future Builders STEM Lab', photo: 'legoFig', featured: false },
+  { id: 'e-coat', title: 'Winter Coat Drive', category: 'Volunteer', date: at(34, 10), durationMins: 240, location: 'Riverbend Commons Hall', address: '45 Commons Way', description: 'Sort and distribute donated winter coats, hats and gloves to families across Riverbend.', capacity: 60, attending: 19, host: 'Riverbend Volunteers', photo: 'snowTrail', featured: false },
 ];
 
 const announcements: Announcement[] = [
