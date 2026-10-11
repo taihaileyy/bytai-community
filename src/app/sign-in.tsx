@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { DEMO_ACCOUNTS, type DemoRole } from '@/services/auth';
 import { useActions } from '@/store/AppStore';
-import { palette, radius, space } from '@/theme';
+import { gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
 import { PressScale } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { AppHeader, Button, DemoNotice, Field, FocusStatusBar, Row, Screen, type IconName } from '@/components/ui';
+import { Photo } from '@/components/Photo';
+import { T } from '@/components/Text';
+import { Avatar, Button, DemoBadge, Field, FocusStatusBar, IconButton, Notice, Row, Wordmark } from '@/components/ui';
 
-const ROLES: { role: DemoRole; icon: IconName; name: string }[] = [
-  { role: 'member', icon: 'person', name: 'Jordan Ellis' },
-  { role: 'admin', icon: 'shield-checkmark', name: 'Avery Brooks' },
+const ROLES: { role: DemoRole; name: string; photo?: 'coffeeSmile' }[] = [
+  { role: 'member', name: 'Taylor Reed', photo: 'coffeeSmile' },
+  { role: 'admin', name: 'Avery Brooks' },
 ];
 
 export default function SignIn() {
@@ -29,74 +31,62 @@ export default function SignIn() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen header={<AppHeader close />}>
-        <FocusStatusBar style="dark" />
-        <View style={styles.logo}>
-          <Txt variant="title" color={palette.cream}>
-            Rb
-          </Txt>
-        </View>
-        <Txt variant="eyebrow" accent center style={{ marginTop: 18 }}>
-          Member portal
-        </Txt>
-        <Txt variant="display" center style={{ marginTop: 8 }}>
-          Welcome back
-        </Txt>
-        <Txt variant="body" muted center style={{ marginTop: 6, marginBottom: 24 }}>
-          Choose a sample account to explore the demo.
-        </Txt>
+    <ToneProvider tone="light">
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: palette.ivory }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <FocusStatusBar style="light" />
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+          <Photo photo="streetcar" width={1200} scrim={0.95} style={{ height: 250 }}>
+            <Row style={{ position: 'absolute', top: 14, left: gutter, right: gutter, justifyContent: 'space-between' }}>
+              <DemoBadge onImage />
+              <IconButton icon="close" tone="glass" label="Close" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            </Row>
+            <View style={{ position: 'absolute', left: gutter, bottom: 22 }}>
+              <Wordmark />
+              <T v="title1" c={palette.ivory} style={{ marginTop: 14 }} accessibilityRole="header">
+                Welcome back
+              </T>
+              <T v="callout" c={palette.goldSoft}>
+                Choose a sample account to explore.
+              </T>
+            </View>
+          </Photo>
 
-        <Row gap={10} style={{ marginBottom: 20 }}>
-          {ROLES.map((r) => {
-            const on = role === r.role;
-            return (
-              <PressScale key={r.role} haptic onPress={() => setRole(r.role)} style={[styles.role, on && styles.roleOn]} accessibilityRole="radio" accessibilityState={{ checked: on }}>
-                <Ionicons name={r.icon} size={22} color={on ? palette.cream : palette.green} />
-                <Txt variant="label" color={on ? palette.cream : palette.ink} style={{ marginTop: 10 }}>
-                  {r.name}
-                </Txt>
-                <Txt variant="caption" color={on ? 'rgba(241,238,228,0.7)' : palette.stone} numberOfLines={1}>
-                  {DEMO_ACCOUNTS[r.role].label}
-                </Txt>
-              </PressScale>
-            );
-          })}
-        </Row>
-
-        <Field label="Email" value={account.email} editable={false} />
-        <Field label="Password" value="demo-password" secureTextEntry editable={false} hint="Prefilled for the demo. Never enter real credentials." />
-
-        <Button title={`Sign in as ${role === 'admin' ? 'admin' : 'member'}`} icon="arrow-forward" loading={busy} onPress={submit} style={{ marginTop: 4 }} />
-        <View style={{ marginTop: 16 }}>
-          <DemoNotice>
-            Demo sign-in. No account is created and nothing is sent anywhere. Production builds would use secure
-            sign-in (e.g. Supabase Auth with email links).
-          </DemoNotice>
-        </View>
-      </Screen>
-    </KeyboardAvoidingView>
+          <View style={{ paddingHorizontal: gutter, paddingTop: 22 }}>
+            <View style={styles.accounts} accessibilityRole="radiogroup">
+              {ROLES.map((r, i) => {
+                const on = role === r.role;
+                return (
+                  <PressScale key={r.role} haptic scaleTo={0.985} onPress={() => setRole(r.role)} accessibilityRole="radio" accessibilityState={{ checked: on }} accessibilityLabel={`${r.name}, ${DEMO_ACCOUNTS[r.role].label}`}>
+                    <Row gap={14} style={[{ paddingHorizontal: 16, paddingVertical: 14 }, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E3D8C6' }]}>
+                      <Avatar name={r.name} size={44} photo={r.photo} />
+                      <View style={{ flex: 1 }}>
+                        <T v="title3">{r.name}</T>
+                        <T v="caption" muted>
+                          {DEMO_ACCOUNTS[r.role].label}
+                        </T>
+                      </View>
+                      {on ? <Ionicons name="checkmark-circle" size={24} color={palette.purple} /> : <View style={styles.radio} />}
+                    </Row>
+                  </PressScale>
+                );
+              })}
+            </View>
+            <View style={{ marginTop: 22 }}>
+              <Field label="Email" value={account.email} editable={false} />
+              <Field label="Password" value="demo-password" secureTextEntry editable={false} hint="Prefilled for the demo. Never enter real credentials." />
+            </View>
+            <Button title={`Continue as ${role === 'admin' ? 'Admin' : 'Member'}`} variant="purple" iconRight="arrow-forward" loading={busy} onPress={submit} />
+            <View style={{ marginTop: 16 }}>
+              <Notice icon="shield-checkmark-outline">Demo sign-in. Nothing is created or sent anywhere. A production build would use secure sign-in such as Supabase Auth.</Notice>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ToneProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  logo: {
-    alignSelf: 'center',
-    marginTop: 8,
-    width: 64,
-    height: 64,
-    borderRadius: 22,
-    backgroundColor: palette.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  role: {
-    flex: 1,
-    padding: space.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: palette.line,
-    backgroundColor: palette.card,
-  },
-  roleOn: { backgroundColor: palette.ink, borderColor: palette.ink },
+  accounts: { borderRadius: radius.lg, backgroundColor: palette.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3D8C6', overflow: 'hidden' },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#CFC3AE' },
 });

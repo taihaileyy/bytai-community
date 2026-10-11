@@ -1,341 +1,198 @@
-/** Feature components built from the UI kit: program, event and announcement cards, charts. */
-import React from 'react';
+/** Feature components for the New Orleans design. */
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import type { Announcement, CommunityEvent, Donation, Program } from '@/data/types';
-import { getCategoryColor, palette, radius, shadow, space } from '@/theme';
-import { useScheme } from '@/theme/SchemeContext';
-import { dayNum, daysUntil, monthShort, relative, shortDate, time, weekday, money } from '@/utils/format';
-import { GrowBar, PressScale, useCountUp } from './Motion';
-import { Txt } from './Txt';
-import { Card, IconBubble, Row, Tag, type IconName } from './ui';
+import { font, gutter, palette, radius, shadow } from '@/theme';
+import { useScheme } from '@/theme/ToneContext';
+import { dayNum, daysUntil, monthShort, relative, shortDate, time, timeRange, weekday, money } from '@/utils/format';
+import { PressScale, useCountUp } from './Motion';
+import { Photo } from './Photo';
+import { T } from './Text';
+import { IconTile, Progress, Row, Tag, hairline, type IconName } from './ui';
 
 /* ───────── Programs ───────── */
 
-const featuredGradients: [string, string][] = [
-  ['#1F5745', '#2F7A63'],
-  ['#2A2414', '#4A3F22'],
-  ['#24364A', '#4F7FA8'],
-];
-
-export function ProgramFeatureCard({ program, index = 0, enrolled }: { program: Program; index?: number; enrolled?: boolean }) {
-  const g = featuredGradients[index % featuredGradients.length];
-  const spots = program.capacity - program.enrolled;
+/** Large photographic program card with dark overlay (Programs screen). */
+export function ProgramCard({ program, enrolled }: { program: Program; enrolled?: boolean }) {
+  const full = program.enrolled >= program.capacity;
   return (
-    <PressScale onPress={() => router.push(`/program/${program.id}`)} accessibilityRole="button" style={{ width: 268 }}>
-      <LinearGradient colors={g} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.feature, shadow.lifted]}>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <View style={styles.featureIcon}>
-            <Ionicons name={program.icon as IconName} size={22} color={palette.cream} />
+    <PressScale
+      onPress={() => router.push(`/program/${program.id}`)}
+      scaleTo={0.98}
+      accessibilityRole="button"
+      accessibilityLabel={`${program.title}. ${program.summary}${enrolled ? ' You are enrolled.' : ''}`}
+      style={[{ marginHorizontal: gutter, marginBottom: 14 }, shadow.card]}
+    >
+      <Photo photo={program.photo} width={1000} scrim={0.92} style={styles.programCard}>
+        <View style={{ position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 6 }}>
+          {enrolled ? <Tag label="Enrolled" tone="gold" icon="checkmark" /> : full ? <Tag label="Waitlist" tone="onImage" /> : null}
+        </View>
+        <Row gap={14} style={styles.programBody}>
+          <IconTile icon={program.icon as IconName} size={42} tone="ivory" />
+          <View style={{ flex: 1 }}>
+            <T v="title3" c={palette.ivory} numberOfLines={1}>
+              {program.title}
+            </T>
+            <T v="callout" c="rgba(248,243,235,0.82)" numberOfLines={2} style={{ marginTop: 2 }}>
+              {program.summary}
+            </T>
           </View>
-          {enrolled ? (
-            <Tag label="Enrolled" fg={palette.night} bg={palette.mintBright} icon="checkmark" />
-          ) : (
-            <Tag label={program.category} fg={palette.cream} bg="rgba(241,238,228,0.14)" />
-          )}
+          <Ionicons name="chevron-forward" size={20} color={palette.gold} />
         </Row>
-        <View style={{ flex: 1 }} />
-        <Txt variant="title" color={palette.cream} numberOfLines={2}>
-          {program.title}
-        </Txt>
-        <Txt variant="caption" color="rgba(241,238,228,0.75)" numberOfLines={2} style={{ marginTop: 6 }}>
-          {program.summary}
-        </Txt>
-        <Row style={{ marginTop: 14 }} gap={6}>
-          <Ionicons name="time-outline" size={13} color={palette.mintBright} />
-          <Txt variant="caption" color={palette.mintBright} numberOfLines={1} style={{ flex: 1 }}>
-            {program.schedule}
-          </Txt>
-          <Txt variant="caption" color="rgba(241,238,228,0.65)">
-            {spots > 0 ? `${spots} spots` : 'Waitlist'}
-          </Txt>
-        </Row>
-      </LinearGradient>
+      </Photo>
     </PressScale>
   );
 }
 
-export function ProgramRowCard({ program, enrolled }: { program: Program; enrolled?: boolean }) {
-  const s = useScheme();
-  const c = getCategoryColor(program.category);
-  const fill = program.enrolled / program.capacity;
+/** Compact horizontal program card (Home carousel). */
+export function ProgramMini({ program, enrolled }: { program: Program; enrolled?: boolean }) {
   return (
-    <Card onPress={() => router.push(`/program/${program.id}`)} style={{ marginBottom: 12 }}>
-      <Row gap={14} style={{ alignItems: 'flex-start' }}>
-        <IconBubble icon={program.icon as IconName} fg={c.fg} bg={c.bg} size={50} />
-        <View style={{ flex: 1 }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Tag label={program.category} fg={c.fg} bg={c.bg} />
-            {enrolled ? <Tag label="Enrolled" fg={palette.green} bg={palette.mintSoft} icon="checkmark" /> : null}
-          </Row>
-          <Txt variant="heading" style={{ marginTop: 8 }}>
-            {program.title}
-          </Txt>
-          <Txt variant="caption" muted numberOfLines={2} style={{ marginTop: 3 }}>
-            {program.summary}
-          </Txt>
-          <Row gap={6} style={{ marginTop: 10 }}>
-            <Ionicons name="calendar-clear-outline" size={13} color={s.muted} />
-            <Txt variant="caption" muted numberOfLines={1} style={{ flex: 1 }}>
-              {program.schedule}
-            </Txt>
-          </Row>
-          <View style={{ marginTop: 12 }}>
-            <GrowBar progress={fill} color={fill > 0.9 ? palette.clay : c.fg} track={s.surface2} height={6} />
-            <Txt variant="caption" muted style={{ marginTop: 6, fontSize: 11.5 }}>
-              {program.enrolled} of {program.capacity} enrolled · {program.ageGroup}
-            </Txt>
-          </View>
+    <PressScale onPress={() => router.push(`/program/${program.id}`)} accessibilityRole="button" accessibilityLabel={program.title} style={{ width: 220 }}>
+      <Photo photo={program.photo} width={600} scrim={0.9} style={{ height: 250, borderRadius: radius.lg }}>
+        <View style={{ position: 'absolute', top: 12, left: 12 }}>
+          <Tag label={enrolled ? 'Enrolled' : program.category} tone={enrolled ? 'gold' : 'onImage'} />
         </View>
-      </Row>
-    </Card>
+        <View style={{ position: 'absolute', left: 14, right: 14, bottom: 14 }}>
+          <T v="title2" c={palette.ivory} numberOfLines={2} style={{ fontSize: 19, lineHeight: 24 }}>
+            {program.title}
+          </T>
+          <T v="caption" c={palette.gold} style={{ marginTop: 6 }} numberOfLines={1}>
+            {program.schedule}
+          </T>
+        </View>
+      </Photo>
+    </PressScale>
   );
 }
 
 /* ───────── Events ───────── */
 
-export function DateBlock({ iso, dark }: { iso: string; dark?: boolean }) {
+export function DateBlock({ iso, tone }: { iso: string; tone?: 'ivory' | 'dark' | 'gold' }) {
   const s = useScheme();
+  const t = tone ?? (s.tone === 'dark' ? 'dark' : 'ivory');
+  const bg = { ivory: palette.ivory2, dark: palette.charcoal2, gold: palette.gold }[t];
+  const fg = t === 'dark' ? palette.ivory : palette.midnight;
   return (
-    <View
-      style={{
-        width: 58,
-        paddingVertical: 9,
-        borderRadius: radius.md,
-        alignItems: 'center',
-        backgroundColor: dark ? palette.night : s.accentSoft,
-      }}
-    >
-      <Txt variant="eyebrow" color={dark ? palette.mintBright : s.accent} style={{ fontSize: 10 }}>
-        {monthShort(iso)}
-      </Txt>
-      <Txt variant="title" color={dark ? palette.cream : s.ink} style={{ fontSize: 24, lineHeight: 28 }}>
+    <View style={{ width: 54, paddingVertical: 10, borderRadius: radius.md, backgroundColor: bg, alignItems: 'center' }} accessibilityLabel={`${weekday(iso)} ${monthShort(iso)} ${dayNum(iso)}`}>
+      <T c={fg} style={{ fontFamily: font.textSemi, fontSize: 10.5, letterSpacing: 1.2 }}>
+        {monthShort(iso).toUpperCase()}
+      </T>
+      <T c={fg} style={{ fontFamily: font.serif, fontSize: 26, lineHeight: 30 }}>
         {dayNum(iso)}
-      </Txt>
-      <Txt variant="caption" color={dark ? 'rgba(241,238,228,0.7)' : s.muted} style={{ fontSize: 11 }}>
+      </T>
+      <T c={fg} style={{ fontFamily: font.text, fontSize: 11, opacity: 0.75 }}>
         {weekday(iso)}
-      </Txt>
+      </T>
     </View>
   );
 }
 
+export function whenLabel(iso: string) {
+  const d = daysUntil(iso);
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  if (d < 0) return 'Past';
+  return `In ${d} days`;
+}
+
+/** Events screen card: date column + photo + details + chevron. */
 export function EventCard({ event, registered }: { event: CommunityEvent; registered?: boolean }) {
   const s = useScheme();
-  const c = getCategoryColor(event.category);
-  const d = daysUntil(event.date);
-  const soon = d >= 0 && d <= 7;
+  const left = Math.max(0, event.capacity - event.attending);
+  const past = new Date(event.date).getTime() < Date.now();
   return (
-    <Card onPress={() => router.push(`/event/${event.id}`)} style={{ marginBottom: 12 }}>
-      <Row gap={14} style={{ alignItems: 'flex-start' }}>
-        <DateBlock iso={event.date} dark={registered} />
-        <View style={{ flex: 1 }}>
-          <Row gap={6} style={{ flexWrap: 'wrap' }}>
-            <Tag label={event.category} fg={c.fg} bg={c.bg} />
-            {event.cancelled ? <Tag label="Cancelled" fg={palette.clay} bg={palette.claySoft} /> : null}
-            {registered ? <Tag label="Going" fg={palette.green} bg={palette.mintSoft} icon="checkmark" /> : null}
-            {!registered && soon && !event.cancelled ? (
-              <Tag label={d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `In ${d} days`} fg="#8A6A1E" bg={palette.goldSoft} />
-            ) : null}
-          </Row>
-          <Txt variant="heading" style={{ marginTop: 8 }} numberOfLines={2}>
-            {event.title}
-          </Txt>
-          <Row gap={6} style={{ marginTop: 6 }}>
-            <Ionicons name="time-outline" size={13} color={s.muted} />
-            <Txt variant="caption" muted>
-              {time(event.date)}
-            </Txt>
-            <Ionicons name="location-outline" size={13} color={s.muted} style={{ marginLeft: 6 }} />
-            <Txt variant="caption" muted numberOfLines={1} style={{ flex: 1 }}>
-              {event.location}
-            </Txt>
-          </Row>
-          <Txt variant="caption" muted style={{ marginTop: 6, fontSize: 11.5 }}>
-            {event.attending} going · {Math.max(0, event.capacity - event.attending)} spots left
-          </Txt>
-        </View>
-      </Row>
-    </Card>
-  );
-}
-
-/* ───────── Announcements ───────── */
-
-const tagColors: Record<Announcement['tag'], { fg: string; bg: string; icon: IconName }> = {
-  News: { fg: palette.sky, bg: palette.skySoft, icon: 'newspaper-outline' },
-  Update: { fg: palette.green, bg: palette.mintSoft, icon: 'refresh-outline' },
-  Urgent: { fg: palette.clay, bg: palette.claySoft, icon: 'alert-circle-outline' },
-  'Thank you': { fg: '#A0782A', bg: palette.goldSoft, icon: 'heart-outline' },
-};
-
-export const announcementStyle = (tag: Announcement['tag']) => tagColors[tag];
-
-export function AnnouncementCard({ item, compact }: { item: Announcement; compact?: boolean }) {
-  const c = tagColors[item.tag];
-  return (
-    <Card style={{ marginBottom: 12 }} flat={compact}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Row gap={6}>
-          <Tag label={item.tag} fg={c.fg} bg={c.bg} icon={c.icon} />
-          {item.pinned ? <Tag label="Pinned" fg={palette.night} bg={palette.paper2} icon="pin" /> : null}
-        </Row>
-        <Txt variant="caption" muted>
-          {relative(item.date)}
-        </Txt>
-      </Row>
-      <Txt variant="heading" style={{ marginTop: 10 }}>
-        {item.title}
-      </Txt>
-      <Txt variant="body" muted numberOfLines={compact ? 2 : undefined} style={{ marginTop: 4 }}>
-        {item.body}
-      </Txt>
-    </Card>
-  );
-}
-
-/* ───────── Stats & charts ───────── */
-
-export function StatTile({
-  icon,
-  value,
-  label,
-  prefix = '',
-  suffix = '',
-  tone = 'light',
-  delta,
-}: {
-  icon: IconName;
-  value: number;
-  label: string;
-  prefix?: string;
-  suffix?: string;
-  tone?: 'light' | 'dark' | 'scheme';
-  delta?: string;
-}) {
-  const s = useScheme();
-  const n = useCountUp(value);
-  const dark = tone === 'dark';
-  const bg = tone === 'scheme' ? s.surface : dark ? 'rgba(241,238,228,0.07)' : s.surface;
-  const fg = dark ? palette.cream : s.ink;
-  const sub = dark ? 'rgba(241,238,228,0.65)' : s.muted;
-  return (
-    <View
-      style={{
-        flex: 1,
-        minWidth: '45%',
-        padding: space.lg,
-        borderRadius: radius.lg,
-        backgroundColor: bg,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: dark ? 'rgba(241,238,228,0.12)' : s.border,
-      }}
+    <PressScale
+      onPress={() => router.push(`/event/${event.id}`)}
+      scaleTo={0.985}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}. ${shortDate(event.date)}, ${time(event.date)}, ${event.location}.${registered ? ' You are registered.' : ''}${event.cancelled ? ' Cancelled.' : ''}`}
+      style={{ marginHorizontal: gutter, marginBottom: 12 }}
     >
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Ionicons name={icon} size={18} color={dark ? palette.mintBright : s.accent} />
-        {delta ? (
-          <Txt variant="caption" color={dark ? palette.mintBright : s.accent} style={{ fontSize: 11 }}>
-            {delta}
-          </Txt>
-        ) : null}
-      </Row>
-      <Txt variant="stat" color={fg} style={{ marginTop: 12 }}>
-        {prefix}
-        {n.toLocaleString('en-US')}
-        {suffix}
-      </Txt>
-      <Txt variant="caption" color={sub} style={{ marginTop: 2 }}>
-        {label}
-      </Txt>
-    </View>
-  );
-}
-
-/** Vertical bar chart built from plain Views (no native chart dependency). */
-export function BarChart({
-  data,
-  height = 150,
-  format = (n: number) => String(n),
-  highlightLast = true,
-}: {
-  data: { label: string; value: number }[];
-  height?: number;
-  format?: (n: number) => string;
-  highlightLast?: boolean;
-}) {
-  const s = useScheme();
-  const max = Math.max(1, ...data.map((d) => d.value));
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: height + 40 }}>
-      {data.map((d, i) => {
-        const last = highlightLast && i === data.length - 1;
-        return (
-          <View key={d.label + i} style={{ flex: 1, alignItems: 'center' }}>
-            <Txt variant="caption" color={last ? s.accent : s.muted} style={{ fontSize: 10.5, marginBottom: 4 }} numberOfLines={1}>
-              {format(d.value)}
-            </Txt>
-            <View style={{ height, width: '100%', justifyContent: 'flex-end' }}>
-              <GrowVertical ratio={d.value / max} color={s.accent} dim={!last} delay={i * 60} />
-            </View>
-            <Txt variant="caption" muted style={{ fontSize: 11, marginTop: 6 }}>
-              {d.label}
-            </Txt>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function GrowVertical({ ratio, color, delay, dim }: { ratio: number; color: string; delay: number; dim?: boolean }) {
-  const v = React.useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    Animated.timing(v, { toValue: Math.max(0.02, ratio), duration: 700, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [ratio, delay, v]);
-  return (
-    <Animated.View
-      style={{
-        width: '100%',
-        borderRadius: 8,
-        backgroundColor: color,
-        opacity: dim ? 0.32 : 1,
-        height: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-      }}
-    />
-  );
-}
-
-/** Horizontal labeled bars (e.g. enrollments by program). */
-export function HBarList({
-  data,
-  format = (n: number) => String(n),
-}: {
-  data: { label: string; value: number; color?: string; sub?: string }[];
-  format?: (n: number) => string;
-}) {
-  const s = useScheme();
-  const max = Math.max(1, ...data.map((d) => d.value));
-  return (
-    <View style={{ gap: 14 }}>
-      {data.map((d, i) => (
-        <View key={d.label}>
-          <Row style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-            <Txt variant="label" numberOfLines={1} style={{ flex: 1 }}>
-              {d.label}
-            </Txt>
-            <Txt variant="label" muted>
-              {format(d.value)}
-            </Txt>
-          </Row>
-          <GrowBar progress={d.value / max} color={d.color ?? s.accent} track={s.surface2} height={8} delay={i * 70} />
-          {d.sub ? (
-            <Txt variant="caption" muted style={{ marginTop: 4, fontSize: 11 }}>
-              {d.sub}
-            </Txt>
-          ) : null}
+      <Row gap={12} style={[styles.eventCard, { backgroundColor: s.surface, borderColor: s.line, opacity: event.cancelled ? 0.6 : 1 }]}>
+        <View style={{ alignSelf: 'flex-start' }}>
+          <DateBlock iso={event.date} tone={registered ? 'gold' : undefined} />
         </View>
-      ))}
+        <View style={{ flex: 1 }}>
+          <Photo photo={event.photo} width={700} style={{ height: 96, borderRadius: radius.sm }} decorative>
+            {registered || event.cancelled ? (
+              <View style={{ position: 'absolute', top: 8, left: 8 }}>
+                {event.cancelled ? <Tag label="Cancelled" tone="onImage" /> : <Tag label={past ? 'Attended' : 'Going'} tone="gold" icon="checkmark" />}
+              </View>
+            ) : null}
+          </Photo>
+          <Row style={{ marginTop: 10, alignItems: 'flex-start' }} gap={8}>
+            <View style={{ flex: 1 }}>
+              <T v="title3" numberOfLines={2}>
+                {event.title}
+              </T>
+              <Meta icon="time-outline" text={timeRange(event.date, event.durationMins)} />
+              <Meta icon="location-outline" text={event.location} />
+              <Meta icon="people-outline" text={past ? `${event.attending} attended` : `${event.attending} going · ${left} spots left`} />
+            </View>
+            <View style={[styles.chev, { borderColor: s.line }]}>
+              <Ionicons name="chevron-forward" size={16} color={s.ink} />
+            </View>
+          </Row>
+        </View>
+      </Row>
+    </PressScale>
+  );
+}
+
+/** Compact row for Home "What's Happening". */
+export function EventMini({ event, registered }: { event: CommunityEvent; registered?: boolean }) {
+  const s = useScheme();
+  return (
+    <PressScale onPress={() => router.push(`/event/${event.id}`)} scaleTo={0.985} accessibilityRole="button" accessibilityLabel={`${event.title}. ${shortDate(event.date)} at ${time(event.date)}, ${event.location}.`}>
+      <Row gap={14} style={{ paddingVertical: 10 }}>
+        <Photo photo={event.photo} width={300} style={{ width: 92, height: 66, borderRadius: radius.sm }} decorative />
+        <View style={{ flex: 1 }}>
+          <T v="title3" numberOfLines={1}>
+            {event.title}
+          </T>
+          <Meta icon="calendar-clear-outline" text={`${monthShort(event.date)} ${dayNum(event.date)} · ${time(event.date)}`} />
+          <Meta icon="location-outline" text={event.location} />
+        </View>
+        {registered ? <Tag label="Going" tone="gold" /> : <Ionicons name="chevron-forward" size={18} color={s.faint} />}
+      </Row>
+    </PressScale>
+  );
+}
+
+export function Meta({ icon, text, c }: { icon: IconName; text: string; c?: string }) {
+  const s = useScheme();
+  const color = c ?? s.muted;
+  return (
+    <Row gap={6} style={{ marginTop: 4, flexShrink: 1 }}>
+      <Ionicons name={icon} size={13} color={c ?? (s.tone === 'dark' ? palette.gold : palette.purple)} />
+      <T v="caption" c={color} numberOfLines={1} style={{ flexShrink: 1, fontSize: 12.5 }}>
+        {text}
+      </T>
+    </Row>
+  );
+}
+
+/* ───────── Announcements & giving ───────── */
+
+export function AnnouncementItem({ item, lines = 2 }: { item: Announcement; lines?: number }) {
+  return (
+    <View style={{ paddingVertical: 16 }} accessible accessibilityLabel={`${item.pinned ? 'Pinned. ' : ''}${item.tag}. ${item.title}. ${item.body}`}>
+      <Row gap={8}>
+        <Tag label={item.tag} tone={item.tag === 'Urgent' ? 'purple' : item.tag === 'Update' ? 'gold' : 'lilac'} />
+        {item.pinned ? <Ionicons name="pin" size={13} color={palette.gold} /> : null}
+        <View style={{ flex: 1 }} />
+        <T v="caption" muted>
+          {relative(item.date)}
+        </T>
+      </Row>
+      <T v="title3" style={{ marginTop: 10 }}>
+        {item.title}
+      </T>
+      <T v="callout" muted numberOfLines={lines || undefined} style={{ marginTop: 4 }}>
+        {item.body}
+      </T>
     </View>
   );
 }
@@ -343,39 +200,140 @@ export function HBarList({
 export function DonationRow({ d, showDonor }: { d: Donation; showDonor?: boolean }) {
   const s = useScheme();
   return (
-    <Row gap={12} style={{ paddingVertical: 12 }}>
-      <IconBubble
-        icon={d.frequency === 'monthly' ? 'repeat' : 'heart'}
-        fg={d.frequency === 'monthly' ? palette.sky : s.accent}
-        bg={d.frequency === 'monthly' ? palette.skySoft : s.accentSoft}
-        size={38}
-      />
-      <View style={{ flex: 1 }}>
-        <Txt variant="bodyStrong" numberOfLines={1}>
-          {showDonor ? d.donorName : d.fund}
-        </Txt>
-        <Txt variant="caption" muted numberOfLines={1}>
-          {showDonor ? `${d.fund} · ` : ''}
-          {shortDate(d.date)} · {d.frequency === 'monthly' ? 'Monthly' : 'One-time'}
-        </Txt>
+    <Row gap={14} style={{ paddingVertical: 13, paddingHorizontal: 16 }} accessible accessibilityLabel={`${money(d.amount)} ${d.frequency === 'monthly' ? 'monthly' : 'one-time'} to ${d.fund} on ${shortDate(d.date)}`}>
+      <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: s.surface2, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={d.frequency === 'monthly' ? 'repeat' : 'heart-outline'} size={16} color={s.tone === 'dark' ? palette.gold : palette.purple} />
       </View>
-      <Txt variant="heading">{money(d.amount)}</Txt>
+      <View style={{ flex: 1 }}>
+        <T v="bodyMedium" numberOfLines={1}>
+          {showDonor ? d.donorName : d.fund}
+        </T>
+        <T v="caption" muted numberOfLines={1} style={{ marginTop: 2 }}>
+          {showDonor ? `${d.fund} · ` : ''}
+          {shortDate(d.date)}
+          {d.frequency === 'monthly' ? ' · Monthly' : ''}
+        </T>
+      </View>
+      <T v="headline" tabular>
+        {money(d.amount)}
+      </T>
     </Row>
   );
 }
 
+/* ───────── Stats & charts ───────── */
+
+const fmt = (n: number, compact?: boolean, prefix = '') =>
+  compact && n >= 100000 ? `${prefix}${Math.round(n / 1000)}K` : `${prefix}${n.toLocaleString('en-US')}`;
+
+/** Icon + number + label, used in the ivory impact strip. */
+export function StatItem({ icon, value, label, prefix, compact }: { icon: IconName; value: number; label: string; prefix?: string; compact?: boolean }) {
+  const n = useCountUp(value);
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }} accessible accessibilityLabel={`${fmt(value, compact, prefix)} ${label}`}>
+      <Ionicons name={icon} size={22} color={palette.midnight} />
+      <T v="stat" tabular style={{ marginTop: 6, fontSize: 19, lineHeight: 23 }}>
+        {fmt(n, compact, prefix)}
+      </T>
+      <T v="caption" muted center style={{ marginTop: 2, fontSize: 10.5, lineHeight: 13 }}>
+        {label}
+      </T>
+    </View>
+  );
+}
+
+/** Dark stat card with gold icon (Impact, Admin). */
+export function StatCard({ icon, value, label, prefix, compact, delta }: { icon?: IconName; value: number; label: string; prefix?: string; compact?: boolean; delta?: string }) {
+  const n = useCountUp(value);
+  return (
+    <View style={styles.statCard} accessible accessibilityLabel={`${fmt(value, compact, prefix)} ${label}${delta ? `, ${delta}` : ''}`}>
+      {icon ? (
+        <View style={styles.statIcon}>
+          <Ionicons name={icon} size={20} color={palette.gold} />
+        </View>
+      ) : null}
+      <T v="stat" c={palette.ivory} tabular style={{ marginTop: icon ? 14 : 0, fontSize: 26, lineHeight: 30 }}>
+        {fmt(n, compact, prefix)}
+      </T>
+      <T v="caption" c="#B3ADA3" style={{ marginTop: 3 }}>
+        {label}
+      </T>
+      {delta ? (
+        <Row gap={4} style={{ marginTop: 8 }}>
+          <Ionicons name="arrow-up" size={12} color={palette.gold} />
+          <T v="caption" c={palette.gold} style={{ fontFamily: font.textSemi }}>
+            {delta}
+          </T>
+        </Row>
+      ) : null}
+    </View>
+  );
+}
+
+export function BarChart({ data, height = 130, format = (n: number) => String(n) }: { data: { label: string; value: number }[]; height?: number; format?: (n: number) => string }) {
+  const s = useScheme();
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: height + 44 }} accessible accessibilityLabel={data.map((d) => `${d.label} ${format(d.value)}`).join(', ')}>
+      {data.map((d, i) => {
+        const last = i === data.length - 1;
+        return (
+          <View key={d.label + i} style={{ flex: 1, alignItems: 'center' }}>
+            <T v="caption" c={last ? palette.gold : s.muted} style={{ fontSize: 10.5, marginBottom: 6 }} numberOfLines={1}>
+              {format(d.value)}
+            </T>
+            <View style={{ height, width: '100%', justifyContent: 'flex-end' }}>
+              <Bar ratio={d.value / max} color={last ? palette.gold : s.surface2} delay={i * 60} />
+            </View>
+            <T v="caption" muted style={{ fontSize: 11, marginTop: 8 }}>
+              {d.label}
+            </T>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function Bar({ ratio, color, delay }: { ratio: number; color: string; delay: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, { toValue: Math.max(0.03, ratio), duration: 700, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [ratio, delay, v]);
+  return <Animated.View style={{ width: '100%', borderRadius: 6, backgroundColor: color, height: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />;
+}
+
+export function RankedBars({ data, format = (n: number) => String(n) }: { data: { label: string; value: number; sub?: string }[]; format?: (n: number) => string }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <View style={{ gap: 16 }}>
+      {data.map((d) => (
+        <View key={d.label} accessible accessibilityLabel={`${d.label}: ${format(d.value)}`}>
+          <Row style={{ justifyContent: 'space-between', marginBottom: 7 }}>
+            <T v="calloutMedium" numberOfLines={1} style={{ flex: 1 }}>
+              {d.label}
+            </T>
+            <T v="calloutMedium" tabular>
+              {format(d.value)}
+            </T>
+          </Row>
+          <Progress value={d.value / max} height={6} />
+          {d.sub ? (
+            <T v="caption" muted style={{ marginTop: 5 }}>
+              {d.sub}
+            </T>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  feature: {
-    height: 228,
-    borderRadius: radius.xl,
-    padding: space.xl,
-  },
-  featureIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: 'rgba(241,238,228,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  programCard: { height: 158, borderRadius: radius.lg },
+  programBody: { position: 'absolute', left: 14, right: 14, bottom: 14, alignItems: 'center' },
+  eventCard: { padding: 12, borderRadius: radius.lg, borderWidth: hairline, alignItems: 'stretch' },
+  chev: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  statCard: { flex: 1, minWidth: '45%', padding: 16, borderRadius: radius.lg, backgroundColor: palette.charcoal, borderWidth: hairline, borderColor: 'rgba(229,183,107,0.22)' },
+  statIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(229,183,107,0.12)', alignItems: 'center', justifyContent: 'center' },
 });

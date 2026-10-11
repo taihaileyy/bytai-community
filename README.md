@@ -14,7 +14,7 @@ with no Mac, Xcode or Android Studio needed.
 - **No custom native code:** every dependency ships inside Expo Go.
 - **Data:** realistic sample data in `src/data/seed.ts`, saved on the phone
   (AsyncStorage) so changes survive a reload. Reset any time from
-  **Me → Reset demo data**.
+  **More → Settings → Reset demo data**.
 
 ---
 
@@ -98,22 +98,24 @@ npm run doctor      # Expo's project health check
 
 ## 2. Demo script for client consultations (≈5 minutes)
 
-1. **Home** — personalized greeting, mission, animated impact numbers,
-   featured programs carousel, upcoming events, announcements.
-2. **Programs** — search ("STEM"), filter by category, open a program.
-   Tap **Sign in to enroll** → pick **Jordan Ellis** → **Enroll now** →
-   animated confirmation. Back on the program, it now shows "You're enrolled".
-3. **Events** — switch to **Calendar**, tap a day with a dot, open an event,
-   add a guest with **+**, **RSVP** → confirmation with a check-in code.
-4. **Give** — choose Monthly, type a custom amount, pick a fund →
-   **Continue** → clearly labeled **demo checkout** → thank-you screen.
-5. **Me** — profile, enrolled programs, registered events, giving history and
-   notifications (new ones appeared for each action above).
-6. **Admin** — sign out, sign in as **Avery Brooks (admin)**. Show the
-   dashboard charts, expand a member, filter donations, **create an event**
-   and **post an announcement**, then go back to the member app: the new event
-   and announcement are already on Home.
-7. **Me → Reset demo data** before the next meeting.
+1. **Home** — streetcar hero, “Stronger People. Brighter Futures.”, impact
+   numbers (tap for Our Impact), What’s Happening, programs, map and news.
+2. **Programs** — filter Youth / Housing / Arts / Workforce, open **Youth
+   Mentorship**, tap **Sign In to Enroll** → **Taylor Reed** → **Enroll Now**
+   → animated confirmation. The program now shows as enrolled.
+3. **Events** — try Upcoming / My Events / Past and the calendar icon. Open
+   **Family Budgeting 101**, add a guest with **+**, **Register Now** →
+   check-in code.
+4. **Give** — Monthly, pick an amount, choose what your gift supports →
+   **Continue to Give** → clearly labeled **demo checkout** → thank-you.
+5. **More (Profile)** — My Programs, My Events, My Donations, Notifications
+   (new ones appeared for each action), then **Community Near You** (tap a
+   gold marker) and **Our Impact**.
+6. **Admin** — Settings → Sign out, sign in as **Avery Brooks (admin)**.
+   Overview (switch This Month / This Year), Recent Activity, then Events →
+   **Create Event** with a cover photo, and Announcements → publish. Back in
+   the member app the new event and announcement are already there.
+7. **More → Settings → Reset demo data** before the next meeting.
 
 ---
 
@@ -126,7 +128,7 @@ npm run doctor      # Expo's project health check
 ├── src/
 │   ├── app/                 # Screens. Every file is a route (Expo Router)
 │   │   ├── _layout.tsx      # Fonts, splash, data provider, root stack
-│   │   ├── (tabs)/          # Home · Programs · Events · Give · Me
+│   │   ├── (tabs)/          # Home · Programs · Events · Give · Profile
 │   │   ├── program/[id].tsx # Program detail + enroll
 │   │   ├── event/[id].tsx   # Event detail + RSVP
 │   │   ├── checkout.tsx     # Simulated checkout (modal)
@@ -134,19 +136,51 @@ npm run doctor      # Expo's project health check
 │   │   ├── sign-in.tsx      # Demo sign-in (modal)
 │   │   ├── notifications.tsx, announcements.tsx, donations.tsx
 │   │   └── admin/           # Separate dark-themed admin console
-│   ├── components/          # UI kit (ui.tsx), cards & charts (domain.tsx), motion
-│   ├── data/                # Types (types.ts) and fictional seed data (seed.ts)
+│   ├── components/          # UI kit (ui.tsx), cards & charts (domain.tsx), TabBar, Photo, motion
+│   ├── data/                # Types, fictional seed data, photo library (photos.ts)
 │   ├── services/            # auth.ts, payments.ts, storage.ts (swap points)
 │   ├── store/               # App state: reducer + React context + hooks
-│   ├── theme/               # Colors, fonts, spacing; light app / dark admin
+│   ├── theme/               # Colors, type, spacing, radius, elevation tokens
 │   └── utils/               # Formatting and dialogs
 └── docs/BACKEND.md          # How to add Supabase + real payments later
 ```
 
-**Design system:** Fraunces headlines, Work Sans body, IBM Plex Mono labels
-(the builtbyTAI type set). The member app uses a warm paper palette with
-muted greens; the admin console uses the dark builtbyTAI palette so it feels
-like a separate tool.
+**Design system** (`src/theme/index.ts`, `src/components/ui.tsx`): New
+Orleans-inspired — midnight `#101115`, champagne gold `#E5B76B`, royal purple
+`#301438`, warm ivory `#F8F3EB`, charcoal `#222329`. Playfair Display for
+headings, Great Vibes script for flourishes ("Give Back to NOLA"), Inter for
+reading, gold fleur-de-lis accents. Gold is the call-to-action on dark
+screens, purple on ivory. Components read a light/dark tone from
+`ToneProvider`, so the same kit renders the ivory member screens and the
+midnight Programs, Map, Impact and Admin screens. Subtle motion throughout:
+parallax photo headers, fade-ins, press feedback, sliding toggles, count-up
+statistics, springy tab icons.
+
+**Screens** (matching the 10-screen reference): Home · Programs · Program
+Details · Events (Upcoming / My Events / Past, plus a calendar view) · Give ·
+Profile ("More" tab) · Event Details · Community Map (`/map`) · Our Impact
+(`/impact`) · Admin Dashboard (`/admin`), plus checkout, confirmations,
+sign-in, notifications, news, My Programs, My Events, Settings and the admin
+sub-pages (Members, Programs, Events, Reporting, Announcements, event editor).
+
+**Community Map** is an illustrated demo map (`src/components/NolaMap.tsx`,
+drawn with `react-native-svg`) with fictional locations from
+`src/data/places.ts` — no map API or key required. It is labeled as a demo
+on screen. A real map (react-native-maps / Mapbox) can replace it later.
+
+**Photography** (`src/data/photos.ts`):
+- The four New Orleans photos (streetcar, youth mural, French Quarter
+  balcony, "Give Back to NOLA" sign) ship inside the app in
+  `assets/photos/`. They were cropped from the design reference, so they are
+  **preview resolution** — replace them with the full-size originals using
+  the same file names and nothing else needs to change.
+- The rest are [Unsplash](https://unsplash.com/license) photos (free to use)
+  loaded from Unsplash's CDN with a blurhash preview (the phone needs
+  internet). Swap any entry in `photos.ts` for a bundled image later.
+
+**Sample figures**: impact and admin numbers start at the reference's sample
+values (`SAMPLE` in `src/data/seed.ts`) and move as you enroll, register and
+donate in the demo. They're labeled "sample data" in the app.
 
 **How data flows:** screens never touch storage. They call hooks/actions from
 `src/store/AppStore.tsx`, which go through `src/services/*`. Replacing the

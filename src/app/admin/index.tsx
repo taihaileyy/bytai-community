@@ -1,178 +1,170 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useImpact, useSession, useStore } from '@/store/AppStore';
-import { dark, getCategoryColor, palette, radius } from '@/theme';
-import { compact, money, monthShort, relative } from '@/utils/format';
-import { FadeIn } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Avatar, Card, Divider, FocusStatusBar, ListRow, Row, Screen, SectionHeader, type IconName } from '@/components/ui';
-import { BarChart, HBarList, StatTile } from '@/components/domain';
-import { AdminHeader } from '@/components/admin';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useActions, useAdminStats, useStore } from '@/store/AppStore';
+import { gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
+import { money, relative } from '@/utils/format';
+import { FadeIn, PressScale } from '@/components/Motion';
+import { T } from '@/components/Text';
+import { FocusStatusBar, Group, ListItem, Row, SectionHeader, Wordmark, type IconName } from '@/components/ui';
+import { StatCard } from '@/components/domain';
+
+type Period = 'month' | 'year';
 
 export default function AdminDashboard() {
-  const { state } = useStore();
-  const { member } = useSession();
-  const impact = useImpact();
+  return (
+    <ToneProvider tone="dark">
+      <Dashboard />
+    </ToneProvider>
+  );
+}
 
-  const data = useMemo(() => {
-    const now = new Date();
-    const months = Array.from({ length: 6 }, (_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 1));
-    const byMonth = months.map((m) => ({
-      label: monthShort(m.toISOString()),
-      value: state.donations
-        .filter((d) => {
-          const x = new Date(d.date);
-          return x.getMonth() === m.getMonth() && x.getFullYear() === m.getFullYear();
-        })
-        .reduce((s, d) => s + d.amount, 0),
-    }));
-    const since30 = Date.now() - 30 * 86400000;
-    const last30 = state.donations.filter((d) => new Date(d.date).getTime() > since30);
-    const monthlyDonors = new Set(state.donations.filter((d) => d.frequency === 'monthly').map((d) => d.donorName)).size;
-    const byProgram = state.programs
-      .map((p) => ({
-        label: p.title,
-        value: state.enrollments.filter((e) => e.programId === p.id).length,
-        color: getCategoryColor(p.category).fg,
-        sub: `${p.enrolled}/${p.capacity} seats filled overall`,
-      }))
-      .sort((a, b) => b.value - a.value);
-    const funds = Object.entries(
-      state.donations.reduce<Record<string, number>>((acc, d) => ({ ...acc, [d.fund]: (acc[d.fund] ?? 0) + d.amount }), {}),
-    )
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value);
-    const upcomingRsvps = state.registrations.filter((r) => {
-      const e = state.events.find((x) => x.id === r.eventId);
-      return e && new Date(e.date).getTime() > Date.now();
-    }).length;
-    const activity = [
-      ...state.donations.slice(0, 6).map((d) => ({ date: d.date, icon: 'heart' as IconName, text: `${d.donorName} gave ${money(d.amount)} to ${d.fund}` })),
-      ...state.enrollments.slice(0, 6).map((e) => ({
-        date: e.date,
-        icon: 'school' as IconName,
-        text: `${state.members.find((m) => m.id === e.memberId)?.name ?? 'A member'} joined ${state.programs.find((p) => p.id === e.programId)?.title ?? 'a program'}`,
-      })),
-      ...state.registrations.slice(0, 6).map((r) => ({
-        date: r.date,
-        icon: 'calendar' as IconName,
-        text: `${state.members.find((m) => m.id === r.memberId)?.name ?? 'A member'} RSVP’d to ${state.events.find((e) => e.id === r.eventId)?.title ?? 'an event'}`,
-      })),
+function Dashboard() {
+  const insets = useSafeAreaInsets();
+  const { state } = useStore();
+  const stats = useAdminStats();
+  const actions = useActions();
+  const [period, setPeriod] = useState<Period>('month');
+  const [menu, setMenu] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  // "This year" multiplies the sample month figures; live demo activity is included in both.
+  const k = period === 'year' ? 11.4 : 1;
+  const cards = [
+    { label: 'Total Members', value: stats.totalMembers, delta: '12% vs last period', icon: 'people-outline' as IconName },
+    { label: 'Event Registrations', value: Math.round(stats.eventRegistrations * k), delta: '18%', icon: 'calendar-outline' as IconName },
+    { label: 'Donations Received', value: Math.round(stats.donations * k), prefix: '$', delta: '24%', icon: 'cash-outline' as IconName },
+    { label: 'Program Enrollments', value: Math.round(stats.programEnrollments * k), delta: '15%', icon: 'grid-outline' as IconName },
+  ];
+
+  const activity = useMemo(() => {
+    const name = (id: string) => state.members.find((m) => m.id === id)?.name ?? 'A member';
+    return [
+      ...state.members.map((m) => ({ date: m.joined, icon: 'person-add-outline' as IconName, text: 'New member joined', sub: m.name })),
+      ...state.registrations.map((r) => ({ date: r.date, icon: 'calendar-outline' as IconName, text: `Event registration: ${state.events.find((e) => e.id === r.eventId)?.title ?? 'Event'}`, sub: name(r.memberId) })),
+      ...state.donations.slice(0, 20).map((d) => ({ date: d.date, icon: 'heart-outline' as IconName, text: `New donation: ${money(d.amount)}`, sub: `${d.donorName} · ${d.fund}` })),
+      ...state.enrollments.map((e) => ({ date: e.date, icon: 'grid-outline' as IconName, text: 'Program enrollment', sub: `${name(e.memberId)} · ${state.programs.find((p) => p.id === e.programId)?.title ?? ''}` })),
     ]
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 6);
-    return {
-      byMonth,
-      last30Total: last30.reduce((s, d) => s + d.amount, 0),
-      monthlyDonors,
-      byProgram,
-      funds,
-      upcomingRsvps,
-      activity,
-    };
+      .filter((a) => new Date(a.date).getTime() <= Date.now())
+      .sort((a, b) => b.date.localeCompare(a.date));
   }, [state]);
 
   const nav: { icon: IconName; title: string; sub: string; href: string }[] = [
-    { icon: 'people', title: 'Members', sub: `${state.members.length} people`, href: '/admin/members' },
-    { icon: 'cash', title: 'Donations', sub: `${state.donations.length} gifts recorded`, href: '/admin/donations' },
-    { icon: 'school', title: 'Program enrollments', sub: `${state.enrollments.length} enrollments`, href: '/admin/enrollments' },
-    { icon: 'calendar', title: 'Manage events', sub: `${state.events.length} events`, href: '/admin/events' },
-    { icon: 'megaphone', title: 'Announcements', sub: `${state.announcements.length} posted`, href: '/admin/announcements' },
+    { icon: 'people-outline', title: 'Members', sub: `${state.members.length} in demo`, href: '/admin/members' },
+    { icon: 'grid-outline', title: 'Programs', sub: 'Enrollments & capacity', href: '/admin/enrollments' },
+    { icon: 'calendar-outline', title: 'Events', sub: 'Create & manage', href: '/admin/events' },
+    { icon: 'bar-chart-outline', title: 'Reporting', sub: 'Donations & trends', href: '/admin/donations' },
+    { icon: 'megaphone-outline', title: 'Announcements', sub: 'Post to members', href: '/admin/announcements' },
   ];
 
   return (
-    <Screen header={<AdminHeader title="Dashboard" root />}>
+    <View style={{ flex: 1, backgroundColor: palette.midnight }}>
       <FocusStatusBar style="light" />
-      <Row gap={10} style={{ marginBottom: 18 }}>
-        {member ? <Avatar name={member.name} color={palette.green} size={34} /> : null}
-        <Txt variant="body" muted style={{ flex: 1 }}>
-          Signed in as <Txt variant="bodyStrong">{member?.name}</Txt> · Program Director
-        </Txt>
-      </Row>
-
-      <FadeIn>
-        <View style={styles.grid}>
-          <StatTile tone="scheme" icon="people-outline" value={state.members.length} label="Members" delta="+3 this month" />
-          <StatTile tone="scheme" icon="cash-outline" prefix="$" value={data.last30Total} label="Gifts, last 30 days" />
-          <StatTile tone="scheme" icon="school-outline" value={state.enrollments.length} label="Active enrollments" />
-          <StatTile tone="scheme" icon="calendar-outline" value={data.upcomingRsvps} label="Upcoming RSVPs" />
-        </View>
-      </FadeIn>
-
-      <SectionHeader eyebrow="Analytics" title="Donations by month" />
-      <Card>
-        <Row style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-          <View>
-            <Txt variant="caption" muted>
-              Last 6 months
-            </Txt>
-            <Txt variant="title">{money(data.byMonth.reduce((s, m) => s + m.value, 0))}</Txt>
-          </View>
-          <View style={styles.pill}>
-            <Ionicons name="repeat" size={13} color={palette.mintBright} />
-            <Txt variant="caption" color={palette.mintBright}>
-              {data.monthlyDonors} monthly donors
-            </Txt>
-          </View>
-        </Row>
-        <BarChart data={data.byMonth} format={(n) => `$${compact(n)}`} />
-      </Card>
-
-      <SectionHeader eyebrow="Analytics" title="Enrollments by program" />
-      <Card>
-        <HBarList data={data.byProgram} />
-      </Card>
-
-      <SectionHeader eyebrow="Analytics" title="Giving by fund" />
-      <Card>
-        <HBarList data={data.funds.map((f, i) => ({ ...f, color: [palette.mint, palette.gold, palette.sky, palette.clay][i % 4] }))} format={(n) => money(n)} />
-      </Card>
-
-      <SectionHeader eyebrow="Community impact" title="Year to date" />
-      <View style={styles.grid}>
-        <StatTile tone="scheme" icon="home-outline" value={impact.familiesServed} label="Families served" />
-        <StatTile tone="scheme" icon="restaurant-outline" value={impact.mealsShared} label="Meals shared" />
-        <StatTile tone="scheme" icon="time-outline" value={impact.volunteerHours} label="Volunteer hours" />
-        <StatTile tone="scheme" icon="trending-up-outline" prefix="$" value={impact.raisedThisYear} label="Raised this year" />
-      </View>
-
-      <SectionHeader title="Manage" />
-      <Card style={{ paddingVertical: 4 }}>
-        {nav.map((n, i) => (
-          <View key={n.href}>
-            {i > 0 ? <Divider /> : null}
-            <ListRow icon={n.icon} title={n.title} subtitle={n.sub} onPress={() => router.push(n.href as never)} />
-          </View>
-        ))}
-      </Card>
-
-      <SectionHeader title="Recent activity" />
-      <Card style={{ paddingVertical: 4 }}>
-        {data.activity.map((a, i) => (
-          <View key={i}>
-            {i > 0 ? <Divider /> : null}
-            <Row gap={12} style={{ paddingVertical: 12 }}>
-              <View style={styles.actIcon}>
-                <Ionicons name={a.icon} size={15} color={palette.mintBright} />
-              </View>
-              <Txt variant="caption" style={{ flex: 1, fontSize: 13 }}>
-                {a.text}
-              </Txt>
-              <Txt variant="caption" muted style={{ fontSize: 11 }}>
-                {relative(a.date)}
-              </Txt>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 48 + insets.bottom }}>
+        <Row style={{ justifyContent: 'space-between', paddingHorizontal: gutter }}>
+          <Wordmark />
+          <PressScale onPress={() => setMenu(!menu)} accessibilityRole="button" accessibilityLabel="Admin menu" accessibilityState={{ expanded: menu }}>
+            <Row gap={6} style={styles.adminPill}>
+              <T v="subhead" c={palette.ivory}>
+                Admin
+              </T>
+              <Ionicons name={menu ? 'chevron-up' : 'chevron-down'} size={14} color={palette.gold} />
             </Row>
-          </View>
-        ))}
-      </Card>
-    </Screen>
+          </PressScale>
+        </Row>
+        {menu ? (
+          <FadeIn distance={6} style={styles.menu}>
+            <PressScale onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} accessibilityRole="button" style={styles.menuItem}>
+              <Row gap={10}>
+                <Ionicons name="phone-portrait-outline" size={17} color={palette.gold} />
+                <T v="calloutMedium">Back to member app</T>
+              </Row>
+            </PressScale>
+            <PressScale
+              onPress={() => {
+                actions.signOut();
+                router.replace('/');
+              }}
+              accessibilityRole="button"
+              style={styles.menuItem}
+            >
+              <Row gap={10}>
+                <Ionicons name="log-out-outline" size={17} color={palette.gold} />
+                <T v="calloutMedium">Sign out</T>
+              </Row>
+            </PressScale>
+          </FadeIn>
+        ) : null}
+
+        <Row style={{ justifyContent: 'space-between', paddingHorizontal: gutter, marginTop: 26 }}>
+          <T v="title1" accessibilityRole="header">
+            Overview
+          </T>
+          <PressScale onPress={() => setPeriod(period === 'month' ? 'year' : 'month')} accessibilityRole="button" accessibilityLabel={`Period: ${period === 'month' ? 'This month' : 'This year'}. Tap to switch.`}>
+            <Row gap={6} style={styles.period}>
+              <T v="subhead" c={palette.ivory}>
+                {period === 'month' ? 'This Month' : 'This Year'}
+              </T>
+              <Ionicons name="swap-vertical" size={13} color={palette.gold} />
+            </Row>
+          </PressScale>
+        </Row>
+
+        <View style={styles.grid}>
+          {cards.map((c) => (
+            <StatCard key={c.label + period} value={c.value} label={c.label} prefix={c.prefix} delta={`${c.delta.split(' ')[0]}`} />
+          ))}
+        </View>
+        <T v="caption" muted style={{ marginHorizontal: gutter, marginTop: 8 }}>
+          Sample figures · demo activity is added live
+        </T>
+
+        <SectionHeader title="Recent Activity" action={showAll ? 'Show less' : 'View all'} onAction={() => setShowAll(!showAll)} />
+        <Group>
+          {activity.slice(0, showAll ? 14 : 5).map((a, i) => (
+            <ListItem
+              key={i}
+              leading={
+                <View style={styles.actIcon}>
+                  <Ionicons name={a.icon} size={16} color={palette.gold} />
+                </View>
+              }
+              title={a.text}
+              subtitle={`${a.sub} · ${relative(a.date)}`}
+            />
+          ))}
+        </Group>
+
+        <SectionHeader title="Manage" />
+        <Group>
+          {nav.map((n) => (
+            <ListItem
+              key={n.href}
+              leading={
+                <View style={styles.actIcon}>
+                  <Ionicons name={n.icon} size={16} color={palette.gold} />
+                </View>
+              }
+              title={n.title}
+              subtitle={n.sub}
+              onPress={() => router.push(n.href as never)}
+            />
+          ))}
+        </Group>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: dark.accentSoft },
-  actIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: dark.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  adminPill: { height: 32, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: palette.charcoal, borderWidth: StyleSheet.hairlineWidth, borderColor: '#44454E' },
+  menu: { marginHorizontal: gutter, marginTop: 10, borderRadius: radius.md, backgroundColor: palette.charcoal, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: '#44454E' },
+  menuItem: { paddingHorizontal: 16, paddingVertical: 13 },
+  period: { height: 30, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: '#44454E' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: gutter, marginTop: 16 },
+  actIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(229,183,107,0.12)', alignItems: 'center', justifyContent: 'center' },
 });
+

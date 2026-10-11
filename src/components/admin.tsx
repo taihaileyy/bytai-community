@@ -1,31 +1,43 @@
 import React from 'react';
-import { View } from 'react-native';
-import { router } from 'expo-router';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { palette, space } from '@/theme';
-import { Txt } from './Txt';
-import { DemoPill, IconButton, Row } from './ui';
+import { gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
+import { T } from './Text';
+import { Fleur, FocusStatusBar, NavBar, Row } from './ui';
 
-/** Header used across admin screens. */
-export function AdminHeader({ title, eyebrow = 'Admin console', right, root }: { title: string; eyebrow?: string; right?: React.ReactNode; root?: boolean }) {
+/** Midnight shell for admin sub-pages. */
+export function AdminScreen({ title, eyebrow = 'Admin', right, children, bottom }: { title: string; eyebrow?: string; right?: React.ReactNode; children: React.ReactNode; bottom?: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ paddingTop: insets.top + 8, paddingHorizontal: space.xl, paddingBottom: 14, backgroundColor: palette.night }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <IconButton
-          icon={root ? 'close' : 'chevron-back'}
-          label={root ? 'Exit admin' : 'Back'}
-          onPress={() => (router.canGoBack() ? router.back() : router.replace(root ? '/account' : '/admin'))}
-        />
-        <DemoPill inverse />
-        <View style={{ minWidth: 40, alignItems: 'flex-end' }}>{right}</View>
-      </Row>
-      <Txt variant="eyebrow" accent style={{ marginTop: 18 }}>
-        {eyebrow}
-      </Txt>
-      <Txt variant="display" style={{ marginTop: 6 }}>
-        {title}
-      </Txt>
-    </View>
+    <ToneProvider tone="dark">
+      <View style={{ flex: 1, backgroundColor: palette.midnight }}>
+        <FocusStatusBar style="light" />
+        <NavBar right={right} />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: (bottom ? 120 : 48) + insets.bottom }}>
+          <View style={{ paddingHorizontal: gutter, paddingBottom: 18 }}>
+            <Row gap={6}>
+              <Fleur size={12} />
+              <T v="eyebrow" c={palette.gold}>
+                {eyebrow}
+              </T>
+            </Row>
+            <T v="display" style={{ marginTop: 6 }} accessibilityRole="header">
+              {title}
+            </T>
+          </View>
+          {children}
+        </ScrollView>
+        {bottom}
+      </View>
+    </ToneProvider>
   );
 }
+
+export function Panel({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.panel, style]}>{children}</View>;
+}
+
+const styles = StyleSheet.create({
+  panel: { marginHorizontal: gutter, padding: 16, borderRadius: radius.lg, backgroundColor: palette.charcoal, borderWidth: StyleSheet.hairlineWidth, borderColor: '#33343C' },
+});

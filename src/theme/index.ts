@@ -1,112 +1,79 @@
 /**
- * ByTAI Community design tokens.
- * Member app = warm "paper" light theme. Admin console = the dark builtbyTAI
- * palette, so the two interfaces feel clearly separate.
+ * ByTAI Community · New Orleans design tokens.
+ *
+ * Midnight + champagne gold + royal purple + warm ivory. Photography and
+ * serif display type carry the mood; gold is for accents and primary
+ * calls to action on dark, purple for primary actions on ivory.
+ * No red, no bright green.
  */
 export const palette = {
-  ink: '#16150F',
-  night: '#131310',
-  night2: '#1B1A15',
-  night3: '#24221A',
-  nightBorder: '#33301F',
-  cream: '#F1EEE4',
-  paper: '#F4F1E8',
-  paper2: '#ECE7D9',
-  card: '#FFFDF7',
-  stone: '#6B6553',
-  stoneLight: '#A69E8C',
-  line: '#E2DBC8',
-  green: '#2F7A63',
-  greenDeep: '#1F5745',
-  mint: '#6FBBA1',
-  mintBright: '#8ED0B8',
-  mintSoft: '#DCEDE4',
-  gold: '#C9A24A',
-  goldSoft: '#F3E7C7',
-  clay: '#C4674F',
-  claySoft: '#F5DED6',
-  sky: '#4F7FA8',
-  skySoft: '#DCE7F1',
+  midnight: '#101115',
+  charcoal: '#222329',
+  charcoal2: '#2B2C33',
+  gold: '#E5B76B',
+  goldDeep: '#8A6A2E', // gold-toned text on ivory (≥ 4.5:1)
+  goldSoft: '#F3E4C6',
+  purple: '#301438',
+  purple2: '#4A2357',
+  lilac: '#EADFEF',
+  ivory: '#F8F3EB',
+  ivory2: '#EFE7DA',
+  paper: '#FFFCF7',
   white: '#FFFFFF',
 } as const;
 
-export type ColorScheme = {
+export type Tone = 'dark' | 'light';
+
+export interface Scheme {
+  tone: Tone;
   bg: string;
-  surface: string;
-  surface2: string;
+  surface: string; // cards
+  surface2: string; // chips, tracks, inset tiles
   ink: string;
   muted: string;
-  border: string;
-  accent: string;
-  accentInk: string;
-  accentSoft: string;
+  faint: string;
+  line: string;
+  accentText: string; // gold-ish text that passes contrast on this background
+}
+
+export const dark: Scheme = {
+  tone: 'dark',
+  bg: palette.midnight,
+  surface: palette.charcoal,
+  surface2: palette.charcoal2,
+  ink: palette.ivory,
+  muted: '#B3ADA3',
+  faint: '#7D786F',
+  line: '#33343C',
+  accentText: palette.gold,
 };
 
-export const light: ColorScheme = {
-  bg: palette.paper,
-  surface: palette.card,
-  surface2: palette.paper2,
-  ink: palette.ink,
-  muted: palette.stone,
-  border: palette.line,
-  accent: palette.green,
-  accentInk: palette.white,
-  accentSoft: palette.mintSoft,
+export const light: Scheme = {
+  tone: 'light',
+  bg: palette.ivory,
+  surface: palette.paper,
+  surface2: palette.ivory2,
+  ink: palette.midnight,
+  muted: '#6B6255',
+  faint: '#A39886',
+  line: '#E3D8C6',
+  accentText: palette.goldDeep,
 };
 
-export const dark: ColorScheme = {
-  bg: palette.night,
-  surface: palette.night2,
-  surface2: palette.night3,
-  ink: palette.cream,
-  muted: palette.stoneLight,
-  border: palette.nightBorder,
-  accent: palette.mint,
-  accentInk: palette.night,
-  accentSoft: '#22382F',
-};
-
-export const fonts = {
-  display: 'Fraunces_600SemiBold',
-  displayItalic: 'Fraunces_500Medium_Italic',
-  body: 'WorkSans_400Regular',
-  medium: 'WorkSans_500Medium',
-  semibold: 'WorkSans_600SemiBold',
-  mono: 'IBMPlexMono_500Medium',
+export const font = {
+  serif: 'PlayfairDisplay_700Bold',
+  serifSemi: 'PlayfairDisplay_600SemiBold',
+  serifRegular: 'PlayfairDisplay_400Regular',
+  script: 'GreatVibes_400Regular',
+  text: 'Inter_400Regular',
+  textMedium: 'Inter_500Medium',
+  textSemi: 'Inter_600SemiBold',
 } as const;
 
-export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 40 } as const;
-export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 } as const;
+export const gutter = 20;
+export const radius = { xs: 8, sm: 10, md: 14, lg: 18, xl: 24, xxl: 30, pill: 999 } as const;
 
 export const shadow = {
-  card: {
-    shadowColor: '#2A2414',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-  },
-  lifted: {
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
-  },
+  card: { shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  soft: { shadowColor: '#3A2A12', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
 } as const;
-
-/** Category accent colors used by programs and events. */
-export const categoryColors: Record<string, { fg: string; bg: string }> = {
-  Food: { fg: palette.clay, bg: palette.claySoft },
-  Youth: { fg: palette.sky, bg: palette.skySoft },
-  Learning: { fg: palette.green, bg: palette.mintSoft },
-  Wellness: { fg: '#8A6BB0', bg: '#ECE4F5' },
-  Housing: { fg: '#A0782A', bg: palette.goldSoft },
-  Volunteer: { fg: palette.green, bg: palette.mintSoft },
-  Fundraiser: { fg: '#A0782A', bg: palette.goldSoft },
-  Workshop: { fg: palette.sky, bg: palette.skySoft },
-  Community: { fg: palette.clay, bg: palette.claySoft },
-};
-
-export const getCategoryColor = (c: string) =>
-  categoryColors[c] ?? { fg: palette.green, bg: palette.mintSoft };

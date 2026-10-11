@@ -26,7 +26,7 @@ function splitStyle(style: StyleProp<ViewStyle>) {
 export function FadeIn({
   children,
   delay = 0,
-  distance = 14,
+  distance = 10,
   style,
 }: {
   children: React.ReactNode;
@@ -38,7 +38,7 @@ export function FadeIn({
   useEffect(() => {
     Animated.timing(v, {
       toValue: 1,
-      duration: 480,
+      duration: 420,
       delay,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: useNative,
@@ -100,42 +100,4 @@ export function useCountUp(value: number, duration = 1100) {
     return () => v.removeListener(id);
   }, [value, duration, v]);
   return display;
-}
-
-/** Bar that grows to `progress` (0–1). */
-export function GrowBar({
-  progress,
-  color,
-  track,
-  height = 8,
-  delay = 0,
-}: {
-  progress: number;
-  color: string;
-  track: string;
-  height?: number;
-  delay?: number;
-}) {
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(v, {
-      toValue: Math.max(0, Math.min(1, progress)),
-      duration: 800,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [progress, v, delay]);
-  return (
-    <Animated.View style={{ height, borderRadius: height, backgroundColor: track, overflow: 'hidden' }}>
-      <Animated.View
-        style={{
-          height,
-          borderRadius: height,
-          backgroundColor: color,
-          width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-        }}
-      />
-    </Animated.View>
-  );
 }

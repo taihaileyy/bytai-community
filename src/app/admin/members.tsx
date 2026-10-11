@@ -2,15 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { LayoutAnimation, Platform, StyleSheet, UIManager, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '@/store/AppStore';
-import { dark, palette, radius } from '@/theme';
+import { gutter, palette, radius } from '@/theme';
 import { money, shortDate } from '@/utils/format';
 import { PressScale } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Avatar, Card, Chip, ChipRow, EmptyState, FocusStatusBar, Row, Screen, SearchField, Tag } from '@/components/ui';
-import { AdminHeader } from '@/components/admin';
+import { T } from '@/components/Text';
+import { Avatar, Divider, EmptyState, Pill, PillRow, Row, SearchField, Tag } from '@/components/ui';
+import { AdminScreen } from '@/components/admin';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
-
 const SORTS = ['Newest', 'Name', 'Most active'] as const;
 
 export default function Members() {
@@ -18,7 +17,6 @@ export default function Members() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<(typeof SORTS)[number]>('Newest');
   const [open, setOpen] = useState<string | null>(null);
-
   const rows = useMemo(() => {
     const query = q.trim().toLowerCase();
     return state.members
@@ -27,95 +25,98 @@ export default function Members() {
         m,
         programs: state.enrollments.filter((e) => e.memberId === m.id).map((e) => state.programs.find((p) => p.id === e.programId)?.title ?? ''),
         events: state.registrations.filter((r) => r.memberId === m.id).length,
-        given: state.donations.filter((d) => d.memberId === m.id || d.donorName === m.name).reduce((s, d) => s + d.amount, 0),
+        given: state.donations.filter((d) => d.memberId === m.id).reduce((s, d) => s + d.amount, 0),
       }))
-      .sort((a, b) =>
-        sort === 'Name' ? a.m.name.localeCompare(b.m.name) : sort === 'Newest' ? b.m.joined.localeCompare(a.m.joined) : b.m.volunteerHours - a.m.volunteerHours,
-      );
+      .sort((a, b) => (sort === 'Name' ? a.m.name.localeCompare(b.m.name) : sort === 'Newest' ? b.m.joined.localeCompare(a.m.joined) : b.m.volunteerHours - a.m.volunteerHours));
   }, [state, q, sort]);
 
   return (
-    <Screen header={<AdminHeader title="Members" eyebrow={`${state.members.length} total`} />}>
-      <FocusStatusBar style="light" />
+    <AdminScreen title="Members" eyebrow={`${state.members.length} in demo · 1,248 sample total`}>
       <SearchField value={q} onChangeText={setQ} placeholder="Search name, email, neighborhood" />
-      <ChipRow>
+      <PillRow style={{ marginTop: 12 }}>
         {SORTS.map((s) => (
-          <Chip key={s} label={s} selected={sort === s} onPress={() => setSort(s)} />
+          <Pill key={s} label={s} selected={sort === s} onPress={() => setSort(s)} />
         ))}
-      </ChipRow>
-      <View style={{ height: 14 }} />
-      {rows.length ? (
-        rows.map(({ m, programs, events, given }) => {
-          const expanded = open === m.id;
-          return (
-            <Card key={m.id} style={{ marginBottom: 10 }} flat>
-              <PressScale
-                scaleTo={0.99}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setOpen(expanded ? null : m.id);
-                }}
-                accessibilityRole="button"
-              >
-                <Row gap={12}>
-                  <Avatar name={m.name} color={m.avatarColor === palette.night ? palette.green : m.avatarColor} size={42} />
-                  <View style={{ flex: 1 }}>
-                    <Row gap={6}>
-                      <Txt variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>
-                        {m.name}
-                      </Txt>
-                      {m.role === 'admin' ? <Tag label="Admin" fg={palette.night} bg={palette.mintBright} /> : null}
-                    </Row>
-                    <Txt variant="caption" muted numberOfLines={1}>
-                      {m.neighborhood} · joined {shortDate(m.joined)}
-                    </Txt>
-                  </View>
-                  <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={dark.muted} />
-                </Row>
-              </PressScale>
-              {expanded ? (
-                <View style={styles.detail}>
-                  <Row style={styles.metrics}>
-                    {[
-                      ['Programs', String(programs.length)],
-                      ['Events', String(events)],
-                      ['Given', money(given)],
-                      ['Hours', String(m.volunteerHours)],
-                    ].map(([k, v]) => (
-                      <View key={k} style={{ flex: 1, alignItems: 'center' }}>
-                        <Txt variant="heading">{v}</Txt>
-                        <Txt variant="caption" muted style={{ fontSize: 11 }}>
-                          {k}
-                        </Txt>
-                      </View>
-                    ))}
+      </PillRow>
+      <View style={styles.list}>
+        {rows.length ? (
+          rows.map(({ m, programs, events, given }, i) => {
+            const expanded = open === m.id;
+            return (
+              <View key={m.id}>
+                {i > 0 ? <Divider inset={70} /> : null}
+                <PressScale
+                  scaleTo={0.99}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setOpen(expanded ? null : m.id);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded }}
+                  accessibilityLabel={`${m.name}, ${m.neighborhood}`}
+                >
+                  <Row gap={14} style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+                    <Avatar name={m.name} size={40} />
+                    <View style={{ flex: 1 }}>
+                      <Row gap={6}>
+                        <T v="bodyMedium" numberOfLines={1} style={{ flexShrink: 1 }}>
+                          {m.name}
+                        </T>
+                        {m.role === 'admin' ? <Tag label="Admin" tone="gold" /> : null}
+                      </Row>
+                      <T v="caption" muted>
+                        {m.neighborhood} · joined {shortDate(m.joined)}
+                      </T>
+                    </View>
+                    <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color={palette.gold} />
                   </Row>
-                  <Txt variant="caption" muted style={{ marginTop: 12 }}>
-                    {m.email} · {m.phone}
-                  </Txt>
-                  {programs.length ? (
-                    <Row gap={6} style={{ flexWrap: 'wrap', marginTop: 10 }}>
-                      {programs.map((p) => (
-                        <Tag key={p} label={p} fg={palette.mintBright} bg={dark.accentSoft} />
+                </PressScale>
+                {expanded ? (
+                  <View style={styles.detail}>
+                    <Row style={{ justifyContent: 'space-between' }}>
+                      {[
+                        [String(programs.length), 'Programs'],
+                        [String(events), 'Events'],
+                        [money(given), 'Given'],
+                        [`${m.volunteerHours}`, 'Hours'],
+                      ].map(([v, l]) => (
+                        <View key={l} style={{ alignItems: 'center', flex: 1 }}>
+                          <T v="stat" style={{ fontSize: 20 }}>
+                            {v}
+                          </T>
+                          <T v="caption" muted>
+                            {l}
+                          </T>
+                        </View>
                       ))}
                     </Row>
-                  ) : null}
-                </View>
-              ) : null}
-            </Card>
-          );
-        })
-      ) : (
-        <EmptyState icon="people-outline" title="No members found" body="Try another search." />
-      )}
-      <Txt variant="caption" muted center style={{ marginTop: 10 }}>
+                    <T v="caption" muted style={{ marginTop: 12 }}>
+                      {m.email} · {m.phone}
+                    </T>
+                    {programs.length ? (
+                      <Row gap={6} style={{ flexWrap: 'wrap', marginTop: 10 }}>
+                        {programs.map((p) => (
+                          <Tag key={p} label={p} tone="neutral" />
+                        ))}
+                      </Row>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })
+        ) : (
+          <EmptyState icon="people-outline" title="No members found" body="Try another search." />
+        )}
+      </View>
+      <T v="caption" muted center style={{ marginTop: 16 }}>
         All member records are fictional sample data.
-      </Txt>
-    </Screen>
+      </T>
+    </AdminScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  detail: { marginTop: 14, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: dark.border },
-  metrics: { backgroundColor: dark.surface2, borderRadius: radius.md, paddingVertical: 12 },
+  list: { marginHorizontal: gutter, marginTop: 16, borderRadius: radius.lg, backgroundColor: palette.charcoal, overflow: 'hidden' },
+  detail: { marginHorizontal: 14, marginBottom: 14, padding: 14, borderRadius: radius.md, backgroundColor: palette.midnight },
 });

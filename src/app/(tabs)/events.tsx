@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMyActivity, useSession, useStore } from '@/store/AppStore';
-import type { EventCategory } from '@/data/types';
-import { palette } from '@/theme';
+import { font, gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
 import { longDate } from '@/utils/format';
 import { FadeIn, PressScale } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Card, Chip, ChipRow, EmptyState, FocusStatusBar, PageTitle, Row, Screen, Segmented } from '@/components/ui';
+import { T } from '@/components/Text';
+import { EmptyState, FocusStatusBar, IconButton, Pill, PillRow, Row, TabHeader } from '@/components/ui';
 import { EventCard } from '@/components/domain';
 
-const CATS: ('All' | EventCategory)[] = ['All', 'Community', 'Volunteer', 'Workshop', 'Fundraiser'];
+type Filter = 'upcoming' | 'mine' | 'past';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
@@ -20,156 +19,153 @@ export default function Events() {
   const { state } = useStore();
   const { signedIn } = useSession();
   const { isRegistered } = useMyActivity();
-  const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [cat, setCat] = useState<(typeof CATS)[number]>('All');
-  const [going, setGoing] = useState(false);
-  const [month, setMonth] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
+  const [filter, setFilter] = useState<Filter>('upcoming');
+  const [calendar, setCalendar] = useState(false);
+  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [day, setDay] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (params.filter && (CATS as string[]).includes(params.filter)) setCat(params.filter as EventCategory);
+    if (params.filter === 'mine') setFilter('mine');
   }, [params.filter]);
 
-  const upcoming = useMemo(
-    () =>
-      state.events
-        .filter((e) => new Date(e.date).getTime() > Date.now() - 6 * 3600_000)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [state.events],
-  );
+  const now = Date.now();
+  const sorted = useMemo(() => [...state.events].sort((a, b) => a.date.localeCompare(b.date)), [state.events]);
+  const list = useMemo(() => {
+    if (filter === 'past') return sorted.filter((e) => new Date(e.date).getTime() < now).reverse();
+    if (filter === 'mine') {
+      const mine = sorted.filter((e) => isRegistered(e.id));
+      return [...mine.filter((e) => new Date(e.date).getTime() >= now), ...mine.filter((e) => new Date(e.date).getTime() < now).reverse()];
+    }
+    return sorted.filter((e) => new Date(e.date).getTime() >= now);
+  }, [sorted, filter, isRegistered, now]);
 
-  const filtered = upcoming.filter((e) => (cat === 'All' || e.category === cat) && (!going || isRegistered(e.id)));
-
-  // Calendar grid for the visible month.
   const grid = useMemo(() => {
-    const first = new Date(month);
-    const start = first.getDay();
+    const start = new Date(month).getDay();
     const daysIn = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     const cells: (Date | null)[] = Array.from({ length: start }, () => null);
     for (let d = 1; d <= daysIn; d++) cells.push(new Date(month.getFullYear(), month.getMonth(), d));
     while (cells.length % 7) cells.push(null);
     return cells;
   }, [month]);
-
-  const eventsOn = (d: Date) => upcoming.filter((e) => sameDay(new Date(e.date), d));
-  const dayEvents = day ? eventsOn(day) : upcoming.filter((e) => {
-    const d = new Date(e.date);
-    return d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear();
-  });
-  const today = new Date();
+  const eventsOn = (d: Date) => sorted.filter((e) => sameDay(new Date(e.date), d));
+  const calList = day ? eventsOn(day) : sorted.filter((e) => new Date(e.date).getMonth() === month.getMonth() && new Date(e.date).getFullYear() === month.getFullYear());
 
   return (
-    <Screen>
-      <FocusStatusBar style="dark" />
-      <PageTitle eyebrow="Events" title="What’s happening" subtitle="Volunteer, learn and celebrate with your neighbors." />
-      <Segmented
-        options={[
-          { value: 'list', label: 'Upcoming' },
-          { value: 'calendar', label: 'Calendar' },
-        ]}
-        value={view}
-        onChange={setView}
-      />
+    <View style={{ flex: 1, backgroundColor: palette.ivory }}>
+      <FocusStatusBar style="light" />
+      <ToneProvider tone="dark">
+        <View style={{ backgroundColor: palette.midnight, paddingBottom: 16 }}>
+          <TabHeader
+            title="Events"
+            right={<IconButton icon={calendar ? 'list' : 'calendar-outline'} tone="ghost" color={palette.gold} label={calendar ? 'Show list' : 'Show calendar'} onPress={() => setCalendar(!calendar)} />}
+          />
+          {!calendar ? (
+            <PillRow>
+              <Pill label="Upcoming" selected={filter === 'upcoming'} onPress={() => setFilter('upcoming')} />
+              <Pill label="My Events" selected={filter === 'mine'} onPress={() => (signedIn ? setFilter('mine') : router.push('/sign-in'))} />
+              <Pill label="Past" selected={filter === 'past'} onPress={() => setFilter('past')} />
+            </PillRow>
+          ) : (
+            <Row style={{ justifyContent: 'space-between', paddingHorizontal: gutter }}>
+              <T v="title2">
+                {MONTHS[month.getMonth()]} <T v="title2" c={palette.gold}>{month.getFullYear()}</T>
+              </T>
+              <Row gap={8}>
+                <IconButton icon="chevron-back" label="Previous month" onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1)); }} />
+                <IconButton icon="chevron-forward" label="Next month" onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)); }} />
+              </Row>
+            </Row>
+          )}
+        </View>
+      </ToneProvider>
 
-      {view === 'list' ? (
-        <>
-          <View style={{ height: 14 }} />
-          <ChipRow>
-            {signedIn ? <Chip label="I'm going" icon="checkmark-circle" selected={going} onPress={() => setGoing(!going)} /> : null}
-            {CATS.map((c) => (
-              <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
-            ))}
-          </ChipRow>
-          <Txt variant="caption" muted style={{ marginTop: 16, marginBottom: 10 }}>
-            {filtered.length} upcoming event{filtered.length === 1 ? '' : 's'}
-          </Txt>
-          {filtered.length ? (
-            filtered.map((e, i) => (
-              <FadeIn key={e.id} delay={i * 50}>
+      <ToneProvider tone="light">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}>
+          {calendar ? (
+            <>
+              <View style={styles.calendar}>
+                <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                    <T key={i} v="caption" muted style={{ flex: 1, textAlign: 'center' }}>
+                      {d}
+                    </T>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {grid.map((d, i) => {
+                    if (!d) return <View key={i} style={styles.cell} />;
+                    const evs = eventsOn(d);
+                    const selected = !!day && sameDay(d, day);
+                    const today = sameDay(d, new Date());
+                    const mine = evs.some((e) => isRegistered(e.id));
+                    return (
+                      <PressScale
+                        key={i}
+                        haptic
+                        scaleTo={0.9}
+                        onPress={() => setDay(selected ? null : d)}
+                        style={styles.cell}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`${d.toDateString()}${evs.length ? `, ${evs.length} event${evs.length > 1 ? 's' : ''}` : ''}${mine ? ', you are going' : ''}`}
+                      >
+                        <View style={[styles.day, today && styles.today, selected && styles.selected]}>
+                          <T v="callout" c={selected ? palette.gold : evs.length ? palette.midnight : '#A39886'} style={{ fontFamily: evs.length || today ? font.textSemi : font.text }}>
+                            {d.getDate()}
+                          </T>
+                        </View>
+                        <View style={[styles.dot, { backgroundColor: evs.length ? (mine ? palette.gold : palette.purple) : 'transparent' }]} />
+                      </PressScale>
+                    );
+                  })}
+                </View>
+                <Row gap={16} style={{ justifyContent: 'center', marginTop: 8 }}>
+                  <Row gap={6}>
+                    <View style={[styles.dot, { backgroundColor: palette.purple }]} />
+                    <T v="caption" muted>Event</T>
+                  </Row>
+                  <Row gap={6}>
+                    <View style={[styles.dot, { backgroundColor: palette.gold }]} />
+                    <T v="caption" muted>You’re going</T>
+                  </Row>
+                </Row>
+              </View>
+              <T v="eyebrow" muted style={{ marginHorizontal: gutter, marginTop: 22, marginBottom: 12 }} accessibilityLiveRegion="polite">
+                {day ? longDate(day.toISOString()) : `All of ${MONTHS[month.getMonth()]}`}
+              </T>
+              {calList.length ? (
+                calList.map((e) => <EventCard key={e.id} event={e} registered={!!isRegistered(e.id)} />)
+              ) : (
+                <EmptyState icon="calendar-clear-outline" title="A quiet day" body="No events scheduled. Pick a day with a dot." />
+              )}
+            </>
+          ) : list.length ? (
+            list.map((e, i) => (
+              <FadeIn key={e.id} delay={Math.min(i, 5) * 50}>
                 <EventCard event={e} registered={!!isRegistered(e.id)} />
               </FadeIn>
             ))
           ) : (
-            <EmptyState icon="calendar-outline" title="Nothing here yet" body="No events match these filters." action="Show all events" onAction={() => { setCat('All'); setGoing(false); }} />
+            <EmptyState
+              icon="calendar-outline"
+              title={filter === 'mine' ? 'No RSVPs yet' : 'Nothing here yet'}
+              body={filter === 'mine' ? 'Events you register for will show up here.' : 'Check back soon for new events.'}
+              action={filter === 'mine' ? 'Browse upcoming' : undefined}
+              onAction={() => setFilter('upcoming')}
+            />
           )}
-        </>
-      ) : (
-        <>
-          <Card style={{ marginTop: 16 }}>
-            <Row style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-              <PressScale haptic onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1)); }} accessibilityLabel="Previous month" style={styles.navBtn}>
-                <Ionicons name="chevron-back" size={18} color={palette.ink} />
-              </PressScale>
-              <Txt variant="heading">
-                {MONTHS[month.getMonth()]} {month.getFullYear()}
-              </Txt>
-              <PressScale haptic onPress={() => { setDay(null); setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)); }} accessibilityLabel="Next month" style={styles.navBtn}>
-                <Ionicons name="chevron-forward" size={18} color={palette.ink} />
-              </PressScale>
-            </Row>
-            <View style={styles.week}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <Txt key={i} variant="eyebrow" muted style={styles.weekLabel}>
-                  {d}
-                </Txt>
-              ))}
-            </View>
-            <View style={styles.grid}>
-              {grid.map((d, i) => {
-                if (!d) return <View key={i} style={styles.cell} />;
-                const evs = eventsOn(d);
-                const selected = day && sameDay(d, day);
-                const isToday = sameDay(d, today);
-                const mine = evs.some((e) => isRegistered(e.id));
-                return (
-                  <PressScale key={i} haptic onPress={() => setDay(selected ? null : d)} style={styles.cell} accessibilityLabel={`${d.toDateString()}${evs.length ? `, ${evs.length} events` : ''}`}>
-                    <View style={[styles.dayCircle, isToday && styles.today, selected && styles.selected]}>
-                      <Txt variant="label" color={selected ? palette.cream : isToday ? palette.green : evs.length ? palette.ink : palette.stoneLight}>
-                        {d.getDate()}
-                      </Txt>
-                    </View>
-                    <View style={[styles.dot, { backgroundColor: evs.length ? (mine ? palette.clay : palette.green) : 'transparent' }]} />
-                  </PressScale>
-                );
-              })}
-            </View>
-            <Row gap={16} style={{ marginTop: 8, justifyContent: 'center' }}>
-              <Row gap={6}>
-                <View style={[styles.dot, { backgroundColor: palette.green }]} />
-                <Txt variant="caption" muted>Event</Txt>
-              </Row>
-              <Row gap={6}>
-                <View style={[styles.dot, { backgroundColor: palette.clay }]} />
-                <Txt variant="caption" muted>You're going</Txt>
-              </Row>
-            </Row>
-          </Card>
-          <Txt variant="heading" style={{ marginTop: 22, marginBottom: 12 }}>
-            {day ? longDate(day.toISOString()) : `All of ${MONTHS[month.getMonth()]}`}
-          </Txt>
-          {dayEvents.length ? (
-            dayEvents.map((e) => <EventCard key={e.id} event={e} registered={!!isRegistered(e.id)} />)
-          ) : (
-            <EmptyState icon="leaf-outline" title="A quiet day" body="No events scheduled. Pick a day with a dot to see what’s on." />
-          )}
-        </>
-      )}
-    </Screen>
+        </ScrollView>
+      </ToneProvider>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  navBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.paper2, alignItems: 'center', justifyContent: 'center' },
-  week: { flexDirection: 'row', marginBottom: 6 },
-  weekLabel: { flex: 1, textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 3 },
-  dayCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  today: { borderWidth: 1.5, borderColor: palette.green },
-  selected: { backgroundColor: palette.ink, borderColor: palette.ink },
-  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
+  calendar: { marginHorizontal: gutter, padding: 14, borderRadius: radius.lg, backgroundColor: palette.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3D8C6' },
+  cell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 2 },
+  day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  today: { borderWidth: 1.5, borderColor: palette.purple },
+  selected: { backgroundColor: palette.midnight, borderColor: palette.midnight },
+  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 1 },
 });
 

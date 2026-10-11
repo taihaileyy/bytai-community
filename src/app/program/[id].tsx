@@ -1,20 +1,20 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useActions, useMyActivity, useSession, useStore } from '@/store/AppStore';
-import { getCategoryColor, palette, radius, space } from '@/theme';
+import { gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
 import { shortDate } from '@/utils/format';
-import { confirmAction } from '@/utils/confirm';
-import { FadeIn, GrowBar } from '@/components/Motion';
-import { Txt } from '@/components/Txt';
-import { Button, Card, EmptyState, FocusStatusBar, IconButton, Row, Screen, Tag, type IconName } from '@/components/ui';
+import { confirmAction, notice } from '@/utils/confirm';
+import { FadeIn } from '@/components/Motion';
+import { Photo } from '@/components/Photo';
+import { T } from '@/components/Text';
+import { DetailLayout } from '@/components/DetailLayout';
+import { Avatar, BottomBar, Button, Divider, EmptyState, Progress, Row, Screen, Tag, type IconName } from '@/components/ui';
 
 export default function ProgramDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
   const { state } = useStore();
   const { signedIn } = useSession();
   const { isEnrolled } = useMyActivity();
@@ -23,17 +23,16 @@ export default function ProgramDetail() {
 
   if (!program)
     return (
-      <Screen>
-        <View style={{ paddingTop: insets.top + 60 }}>
+      <ToneProvider tone="light">
+        <Screen>
           <EmptyState icon="alert-circle-outline" title="Program not found" body="It may have been removed." action="Back to programs" onAction={() => router.replace('/programs')} />
-        </View>
-      </Screen>
+        </Screen>
+      </ToneProvider>
     );
 
-  const c = getCategoryColor(program.category);
   const enrollment = isEnrolled(program.id);
   const full = program.enrolled >= program.capacity;
-  const fill = program.enrolled / program.capacity;
+  const left = Math.max(0, program.capacity - program.enrolled);
 
   const enroll = () => {
     if (!signedIn) return router.push('/sign-in');
@@ -42,166 +41,125 @@ export default function ProgramDetail() {
       pathname: '/confirm',
       params: {
         kind: 'program',
-        title: status === 'active' ? "You're enrolled!" : "You're on the waitlist",
+        title: status === 'active' ? 'You’re Enrolled' : 'You’re on the Waitlist',
         subtitle: program.title,
         detail: `${program.schedule}\n${program.location}`,
         code: `ENR-${program.id.slice(2, 6).toUpperCase()}-${Math.floor(1000 + Math.random() * 8999)}`,
         note: `${program.lead} will reach out with everything you need before your first session.`,
+        photo: program.photo,
       },
     });
   };
 
-  const leave = () =>
-    confirmAction('Leave this program?', `You'll lose your spot in ${program.title}.`, () => actions.unenroll(program.id), 'Leave');
-
-  const facts: { icon: IconName; label: string; value: string }[] = [
-    { icon: 'calendar-clear-outline', label: 'Schedule', value: program.schedule },
-    { icon: 'location-outline', label: 'Where', value: program.location },
-    { icon: 'people-outline', label: 'Who', value: program.ageGroup },
-    { icon: 'person-circle-outline', label: 'Program lead', value: program.lead },
+  const info: { icon: IconName; text: string }[] = [
+    { icon: 'people-outline', text: program.ageGroup },
+    { icon: 'calendar-outline', text: program.schedule },
+    { icon: 'location-outline', text: program.location },
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.paper }}>
-      <FocusStatusBar style="light" />
-      <Screen padded={false} bottomInset={false} contentStyle={{ paddingBottom: 140 }}>
-        <LinearGradient colors={[palette.night, palette.greenDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hero, { paddingTop: insets.top + 8 }]}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <IconButton icon="chevron-back" tone="inverse" label="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/programs'))} />
-            <Tag label={program.category} fg={palette.cream} bg="rgba(241,238,228,0.14)" />
+    <DetailLayout
+      photo={program.photo}
+      title={program.title}
+      fallback="/programs"
+      position="top"
+      onShare={() => notice('Share (demo)', 'In the finished app this opens the share sheet with a link to this program.')}
+      bottom={
+        <ToneProvider tone="light">
+          <BottomBar>
+            {enrollment ? (
+              <Row gap={10}>
+                <Button title="Leave" variant="outline" onPress={() => confirmAction('Leave this program?', `You'll give up your spot in ${program.title}.`, () => actions.unenroll(program.id), 'Leave')} style={{ flex: 1 }} />
+                <Button title="My Programs" variant="purple" iconRight="arrow-forward" onPress={() => router.push('/my-programs')} style={{ flex: 2 }} />
+              </Row>
+            ) : (
+              <Button title={!signedIn ? 'Sign In to Enroll' : full ? 'Join the Waitlist' : 'Enroll Now'} variant="purple" iconRight="arrow-forward" onPress={enroll} />
+            )}
+          </BottomBar>
+        </ToneProvider>
+      }
+    >
+      <View style={{ paddingHorizontal: gutter }}>
+        <FadeIn>
+          <Row gap={6}>
+            <Tag label={program.category} tone="gold" />
+            {enrollment ? <Tag label={enrollment.status === 'active' ? 'Enrolled' : 'Waitlist'} tone="purple" icon="checkmark" /> : null}
           </Row>
-          <FadeIn delay={40}>
-            <View style={styles.heroIcon}>
-              <Ionicons name={program.icon as IconName} size={30} color={palette.night} />
-            </View>
-            <Txt variant="hero" color={palette.cream} style={{ marginTop: 18 }}>
-              {program.title}
-            </Txt>
-            <Txt variant="body" color="rgba(241,238,228,0.8)" style={{ marginTop: 10 }}>
-              {program.summary}
-            </Txt>
-          </FadeIn>
-        </LinearGradient>
-
-        <View style={{ paddingHorizontal: space.xl }}>
-          <FadeIn delay={120}>
-            <Card style={{ marginTop: -28 }}>
-              {facts.map((f, i) => (
-                <Row key={f.label} gap={14} style={[styles.fact, i < facts.length - 1 && styles.factBorder]}>
-                  <Ionicons name={f.icon} size={20} color={c.fg} />
-                  <View style={{ flex: 1 }}>
-                    <Txt variant="caption" muted>
-                      {f.label}
-                    </Txt>
-                    <Txt variant="bodyStrong">{f.value}</Txt>
-                  </View>
-                </Row>
-              ))}
-            </Card>
-          </FadeIn>
-
-          {enrollment ? (
-            <FadeIn>
-              <View style={styles.enrolledBanner}>
-                <Ionicons name="checkmark-circle" size={22} color={palette.green} />
-                <View style={{ flex: 1 }}>
-                  <Txt variant="bodyStrong" color={palette.greenDeep}>
-                    {enrollment.status === 'active' ? "You're enrolled" : "You're on the waitlist"}
-                  </Txt>
-                  <Txt variant="caption" color={palette.green}>
-                    Since {shortDate(enrollment.date)}
-                  </Txt>
-                </View>
-              </View>
-            </FadeIn>
-          ) : null}
-
-          <Txt variant="title" style={{ marginTop: 28, marginBottom: 10 }}>
-            About this program
-          </Txt>
-          <Txt variant="body" muted>
+          <T v="display" style={{ marginTop: 12 }} accessibilityRole="header">
+            {program.title}
+          </T>
+          <T v="body" muted style={{ marginTop: 10 }}>
             {program.description}
-          </Txt>
+          </T>
+        </FadeIn>
 
-          <Txt variant="title" style={{ marginTop: 28, marginBottom: 12 }}>
-            What you'll get
-          </Txt>
-          {program.outcomes.map((o) => (
-            <Row key={o} gap={12} style={{ marginBottom: 12 }}>
-              <View style={[styles.check, { backgroundColor: c.bg }]}>
-                <Ionicons name="checkmark" size={15} color={c.fg} />
-              </View>
-              <Txt variant="body" style={{ flex: 1 }}>
-                {o}
-              </Txt>
+        <View style={{ marginTop: 16, gap: 10 }}>
+          {info.map((r) => (
+            <Row key={r.text} gap={12}>
+              <Ionicons name={r.icon} size={18} color={palette.purple} />
+              <T v="calloutMedium" style={{ flex: 1 }}>
+                {r.text}
+              </T>
             </Row>
           ))}
-
-          <Card style={{ marginTop: 16 }} flat>
-            <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-              <Txt variant="label">Availability</Txt>
-              <Txt variant="label" color={full ? palette.clay : palette.green}>
-                {full ? 'Full — waitlist open' : `${program.capacity - program.enrolled} spots left`}
-              </Txt>
-            </Row>
-            <GrowBar progress={fill} color={full ? palette.clay : c.fg} track={palette.paper2} height={10} />
-            <Txt variant="caption" muted style={{ marginTop: 8 }}>
-              {program.enrolled} of {program.capacity} participants enrolled
-            </Txt>
-          </Card>
         </View>
-      </Screen>
 
-      <View style={[styles.bar, { paddingBottom: insets.bottom + 12 }]}>
         {enrollment ? (
-          <Row gap={10}>
-            <Button title="Leave program" variant="secondary" onPress={leave} style={{ flex: 1 }} />
-            <Button title="My programs" icon="person" onPress={() => router.push('/account')} style={{ flex: 1 }} />
+          <T v="caption" muted style={{ marginTop: 12 }}>
+            {enrollment.status === 'active' ? 'Enrolled' : 'On the waitlist'} since {shortDate(enrollment.date)}
+          </T>
+        ) : null}
+
+        {/* Gallery */}
+        <Row gap={10} style={{ marginTop: 22 }}>
+          {[program.photo, ...program.gallery].slice(1, 3).map((g) => (
+            <Photo key={g} photo={g} width={500} style={styles.gallery} />
+          ))}
+        </Row>
+
+        <T v="title1" style={{ marginTop: 26 }} accessibilityRole="header">
+          What You’ll Gain
+        </T>
+        <View style={styles.gains}>
+          {program.outcomes.map((o) => (
+            <View key={o.label} style={styles.gain} accessible accessibilityLabel={o.label}>
+              <Ionicons name={o.icon as IconName} size={24} color={palette.purple} />
+              <T v="caption" center style={{ marginTop: 8, fontSize: 11.5, lineHeight: 14 }}>
+                {o.label}
+              </T>
+            </View>
+          ))}
+        </View>
+
+        <Divider style={{ marginVertical: 24 }} />
+
+        <Row gap={14}>
+          <Avatar name={program.lead} size={46} />
+          <View style={{ flex: 1 }}>
+            <T v="caption" muted>
+              Program lead
+            </T>
+            <T v="title3">{program.lead}</T>
+          </View>
+          <Button title="Message" size="sm" variant="outline" icon="chatbubble-outline" onPress={() => notice('Message (demo)', 'Members can message program leads in the finished app.')} />
+        </Row>
+
+        <View style={{ marginTop: 24 }}>
+          <Row style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+            <T v="calloutMedium">Availability</T>
+            <T v="callout" muted tabular>
+              {full ? 'Full · waitlist open' : `${left} of ${program.capacity} spots open`}
+            </T>
           </Row>
-        ) : (
-          <Button
-            title={!signedIn ? 'Sign in to enroll' : full ? 'Join the waitlist' : 'Enroll now — it’s free'}
-            icon={!signedIn ? 'log-in-outline' : 'arrow-forward'}
-            onPress={enroll}
-          />
-        )}
+          <Progress value={program.enrolled / program.capacity} height={6} />
+        </View>
       </View>
-    </View>
+    </DetailLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingHorizontal: space.xl, paddingBottom: 52, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroIcon: {
-    marginTop: 26,
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: palette.mintBright,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fact: { paddingVertical: 12 },
-  factBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.line },
-  check: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  enrolledBanner: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: radius.md,
-    backgroundColor: palette.mintSoft,
-  },
-  bar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: space.xl,
-    paddingTop: 12,
-    backgroundColor: 'rgba(244,241,232,0.96)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: palette.line,
-  },
+  gallery: { flex: 1, height: 110, borderRadius: radius.md },
+  gains: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  gain: { flex: 1, paddingVertical: 14, paddingHorizontal: 4, borderRadius: radius.md, backgroundColor: palette.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3D8C6', alignItems: 'center' },
 });
