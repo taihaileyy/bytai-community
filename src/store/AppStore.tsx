@@ -4,7 +4,7 @@
  * so the data source can be swapped for Supabase without UI changes.
  */
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { createSeedState, SEED_VERSION } from '@/data/seed';
+import { createSeedState, SAMPLE, SEED_VERSION } from '@/data/seed';
 import type { CommunityEvent, DemoState, DonationFrequency, ID, Announcement } from '@/data/types';
 import { localAdapter } from '@/services/storage';
 import { paymentProvider, type ChargeRequest } from '@/services/payments';
@@ -151,21 +151,45 @@ export function useMyActivity() {
   }, [state.enrollments, state.registrations, state.donations, state.notifications, id]);
 }
 
-/** Community-wide impact numbers shown on Home and in Admin. */
+const BASE = createSeedState();
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const BASELINE = {
+  enrolled: sum(BASE.programs.map((p) => p.enrolled)),
+  donations: BASE.donations.length,
+  donated: sum(BASE.donations.map((d) => d.amount)),
+  hours: sum(BASE.members.map((m) => m.volunteerHours)),
+  members: BASE.members.length,
+  registrations: BASE.registrations.length,
+  enrollments: BASE.enrollments.length,
+};
+
+/**
+ * Headline impact numbers. They start at the sample figures from the
+ * design and move with what happens in the demo (gifts, enrollments).
+ */
 export function useImpact() {
   const { state } = useStore();
   return useMemo(() => {
-    const raisedThisYear = state.donations
-      .filter((d) => new Date(d.date).getFullYear() === new Date().getFullYear())
-      .reduce((s, d) => s + d.amount, 0);
-    const served = state.programs.reduce((s, p) => s + p.enrolled, 0);
-    const volunteerHours = state.members.reduce((s, m) => s + m.volunteerHours, 0) + 12_400;
+    const donated = sum(state.donations.map((d) => d.amount));
     return {
-      familiesServed: 1_820 + served,
-      mealsShared: 48_250 + state.donations.length * 12,
-      volunteerHours,
-      raisedThisYear: 182_000 + raisedThisYear,
-      peopleInPrograms: served,
+      familiesSupported: SAMPLE.familiesSupported + sum(state.programs.map((p) => p.enrolled)) - BASELINE.enrolled,
+      mealsShared: SAMPLE.mealsShared + (state.donations.length - BASELINE.donations) * 12,
+      volunteerHours: SAMPLE.volunteerHours + sum(state.members.map((m) => m.volunteerHours)) - BASELINE.hours,
+      investedInNola: SAMPLE.investedInNola + donated - BASELINE.donated,
     };
   }, [state.donations, state.programs, state.members]);
+}
+
+/** Admin headline figures (sample baseline + live demo activity). */
+export function useAdminStats() {
+  const { state } = useStore();
+  return useMemo(() => {
+    const donated = sum(state.donations.map((d) => d.amount));
+    return {
+      totalMembers: SAMPLE.totalMembers + state.members.length - BASELINE.members,
+      eventRegistrations: SAMPLE.eventRegistrations + state.registrations.length - BASELINE.registrations,
+      donations: SAMPLE.donationsThisMonth + donated - BASELINE.donated,
+      programEnrollments: SAMPLE.programEnrollments + state.enrollments.length - BASELINE.enrollments,
+    };
+  }, [state]);
 }

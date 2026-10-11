@@ -6,8 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "backgroundColor": "#F7F6F3",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#101115",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.builtbytai.community"
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.builtbytai.community",
       "adaptiveIcon": {
-        "backgroundColor": "#18181A",
+        "backgroundColor": "#101115",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -35,7 +35,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#F7F6F3"
+          "backgroundColor": "#101115"
         }
       ],
       "expo-image"

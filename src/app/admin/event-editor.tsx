@@ -6,13 +6,13 @@ import * as Haptics from 'expo-haptics';
 import type { EventCategory } from '@/data/types';
 import { EVENT_COVERS, type PhotoKey } from '@/data/photos';
 import { useActions, useStore } from '@/store/AppStore';
-import { color, font, gutter, radius } from '@/theme';
+import { font, gutter, palette, radius } from '@/theme';
 import { dayNum, monthShort, weekday } from '@/utils/format';
 import { notice } from '@/utils/confirm';
 import { PressScale } from '@/components/Motion';
 import { Photo } from '@/components/Photo';
 import { T } from '@/components/Text';
-import { BottomBar, Button, Chip, ChipRow, Field, Row, Stepper, Toggle } from '@/components/ui';
+import { BottomBar, Button, Field, Pill, PillRow, Row, Stepper, Toggle } from '@/components/ui';
 import { AdminScreen, Panel } from '@/components/admin';
 
 const CATS: EventCategory[] = ['Community', 'Volunteer', 'Workshop', 'Fundraiser'];
@@ -70,7 +70,7 @@ export default function EventEditor() {
       address: address.trim() || location.trim(),
       description: description.trim() || 'Details coming soon.',
       capacity: capacity * 10,
-      host: existing?.host ?? 'Riverbend Events Team',
+      host: existing?.host ?? 'BYTAI Community Events Team',
       featured,
     };
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -85,7 +85,7 @@ export default function EventEditor() {
   };
 
   const Label = ({ children }: { children: string }) => (
-    <T v="subhead" c={color.ink2} style={{ marginHorizontal: gutter, marginTop: 22, marginBottom: 10 }}>
+    <T v="subhead" muted style={{ marginHorizontal: gutter, marginTop: 22, marginBottom: 10 }}>
       {children}
     </T>
   );
@@ -98,11 +98,11 @@ export default function EventEditor() {
         bottom={
           <BottomBar>
             {error ? (
-              <T v="caption" c={color.danger} center style={{ marginBottom: 8 }} accessibilityLiveRegion="assertive">
+              <T v="caption" c={palette.gold} center style={{ marginBottom: 8 }} accessibilityLiveRegion="assertive">
                 {error}
               </T>
             ) : null}
-            <Button title={existing ? 'Save changes' : 'Publish event'} onPress={save} />
+            <Button title={existing ? 'Save Changes' : 'Publish Event'} variant="gold" onPress={save} />
           </BottomBar>
         }
       >
@@ -111,7 +111,7 @@ export default function EventEditor() {
         </View>
 
         <Label>Cover photo</Label>
-        <ChipRow>
+        <PillRow>
           {EVENT_COVERS.map((k) => {
             const on = photo === k;
             return (
@@ -119,24 +119,24 @@ export default function EventEditor() {
                 <Photo photo={k} width={240} style={[styles.cover, on && styles.coverOn]} decorative>
                   {on ? (
                     <View style={styles.coverCheck}>
-                      <Ionicons name="checkmark" size={14} color={color.white} />
+                      <Ionicons name="checkmark" size={14} color={palette.midnight} />
                     </View>
                   ) : null}
                 </Photo>
               </PressScale>
             );
           })}
-        </ChipRow>
+        </PillRow>
 
         <Label>Category</Label>
-        <ChipRow>
+        <PillRow>
           {CATS.map((c) => (
-            <Chip key={c} label={c} selected={category === c} onPress={() => setCategory(c)} />
+            <Pill key={c} label={c} selected={category === c} onPress={() => setCategory(c)} />
           ))}
-        </ChipRow>
+        </PillRow>
 
         <Label>Date</Label>
-        <ChipRow>
+        <PillRow>
           {days.map((d) => {
             const on = d.getTime() === day;
             const iso = d.toISOString();
@@ -150,36 +150,36 @@ export default function EventEditor() {
                 accessibilityLabel={d.toDateString()}
                 style={[styles.date, on && styles.dateOn]}
               >
-                <T v="caption" c={on ? 'rgba(255,255,255,0.7)' : color.muted} style={{ fontSize: 11 }}>
+                <T v="caption" c={on ? palette.midnight : '#B3ADA3'} style={{ fontSize: 11 }}>
                   {weekday(iso)}
                 </T>
-                <T c={on ? color.white : color.ink} style={{ fontFamily: font.display, fontSize: 19, lineHeight: 23 }}>
+                <T c={on ? palette.midnight : palette.ivory} style={{ fontFamily: font.serif, fontSize: 19, lineHeight: 23 }}>
                   {dayNum(iso)}
                 </T>
-                <T v="caption" c={on ? 'rgba(255,255,255,0.7)' : color.muted} style={{ fontSize: 10.5 }}>
+                <T v="caption" c={on ? palette.midnight : '#B3ADA3'} style={{ fontSize: 10.5 }}>
                   {monthShort(iso)}
                 </T>
               </PressScale>
             );
           })}
-        </ChipRow>
+        </PillRow>
 
         <Label>Start time</Label>
-        <ChipRow>
+        <PillRow>
           {TIMES.map((t) => (
-            <Chip key={t} label={label12(t)} selected={timeStr === t} onPress={() => setTimeStr(t)} />
+            <Pill key={t} label={label12(t)} selected={timeStr === t} onPress={() => setTimeStr(t)} />
           ))}
-        </ChipRow>
+        </PillRow>
 
         <Label>Duration</Label>
-        <ChipRow>
+        <PillRow>
           {DURATIONS.map((d) => (
-            <Chip key={d} label={durLabel(d)} selected={duration === d} onPress={() => setDuration(d)} />
+            <Pill key={d} label={durLabel(d)} selected={duration === d} onPress={() => setDuration(d)} />
           ))}
-        </ChipRow>
+        </PillRow>
 
         <View style={{ paddingHorizontal: gutter, marginTop: 24 }}>
-          <Field label="Location" value={location} onChangeText={(t) => { setLocation(t); setError(''); }} placeholder="e.g. Riverbend Commons Hall" />
+          <Field label="Location" value={location} onChangeText={(t) => { setLocation(t); setError(''); }} placeholder="e.g. Tremé Community Center" />
           <Field label="Address (optional)" value={address} onChangeText={setAddress} placeholder="e.g. 45 Commons Way" />
           <Field label="Description" value={description} onChangeText={setDescription} placeholder="What should people know?" multiline maxLength={400} />
         </View>
@@ -194,7 +194,7 @@ export default function EventEditor() {
             </View>
             <Stepper label="Capacity in tens" value={capacity} onChange={setCapacity} min={1} max={50} />
           </Row>
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: color.line }} />
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: '#3A3B43' }} />
           <Toggle label="Feature this event" description="Highlights it at the top of Events." value={featured} onChange={setFeatured} />
         </Panel>
       </AdminScreen>
@@ -204,8 +204,8 @@ export default function EventEditor() {
 
 const styles = StyleSheet.create({
   cover: { width: 92, height: 92, borderRadius: radius.md },
-  coverOn: { borderWidth: 3, borderColor: color.ink },
-  coverCheck: { position: 'absolute', right: 6, bottom: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
-  date: { width: 56, paddingVertical: 9, borderRadius: radius.md, alignItems: 'center', backgroundColor: color.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: color.lineStrong },
-  dateOn: { backgroundColor: color.ink, borderColor: color.ink },
+  coverOn: { borderWidth: 3, borderColor: palette.gold },
+  coverCheck: { position: 'absolute', right: 6, bottom: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: palette.gold, alignItems: 'center', justifyContent: 'center' },
+  date: { width: 56, paddingVertical: 9, borderRadius: radius.md, alignItems: 'center', backgroundColor: palette.charcoal, borderWidth: StyleSheet.hairlineWidth, borderColor: '#44454E' },
+  dateOn: { backgroundColor: palette.gold, borderColor: palette.gold },
 });

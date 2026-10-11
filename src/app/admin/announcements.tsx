@@ -3,11 +3,11 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import type { Announcement } from '@/data/types';
 import { useActions, useStore } from '@/store/AppStore';
-import { color, gutter } from '@/theme';
+import { gutter, palette } from '@/theme';
 import { confirmAction } from '@/utils/confirm';
 import { FadeIn } from '@/components/Motion';
 import { T } from '@/components/Text';
-import { Button, Chip, ChipRow, Divider, Field, Row, SectionHeader, Toggle } from '@/components/ui';
+import { Button, Divider, Field, Pill, PillRow, Row, SectionHeader, Toggle } from '@/components/ui';
 import { AnnouncementItem } from '@/components/domain';
 import { AdminScreen, Panel } from '@/components/admin';
 
@@ -43,19 +43,19 @@ export default function AdminAnnouncements() {
           </T>
           <Field label="Headline" value={title} onChangeText={setTitle} placeholder="e.g. Pantry closed Monday for the holiday" maxLength={80} />
           <Field label="Message" value={body} onChangeText={setBody} placeholder="Share the details with members…" multiline maxLength={400} />
-          <T v="subhead" c={color.ink2} style={{ marginBottom: 10 }}>
+          <T v="subhead" muted style={{ marginBottom: 10 }}>
             Label
           </T>
-          <ChipRow style={{ marginHorizontal: -18 }}>
+          <PillRow style={{ marginHorizontal: -16 }}>
             {TAGS.map((t) => (
-              <Chip key={t} label={t} selected={tag === t} onPress={() => setTag(t)} />
+              <Pill key={t} label={t} selected={tag === t} onPress={() => setTag(t)} />
             ))}
-          </ChipRow>
+          </PillRow>
           <Toggle label="Pin to top" description="Pinned posts appear first on Home." value={pinned} onChange={setPinned} />
-          <Button title="Publish to members" icon="paper-plane-outline" disabled={!valid} onPress={post} style={{ marginTop: 6 }} />
+          <Button title="Publish to Members" variant="gold" icon="paper-plane-outline" disabled={!valid} onPress={post} style={{ marginTop: 6 }} />
           {posted ? (
             <FadeIn>
-              <T v="subhead" c={color.accent} center style={{ marginTop: 12 }} accessibilityLiveRegion="polite">
+              <T v="subhead" c={palette.gold} center style={{ marginTop: 12 }} accessibilityLiveRegion="polite">
                 Published — it’s live on the member Home screen.
               </T>
             </FadeIn>
@@ -69,8 +69,8 @@ export default function AdminAnnouncements() {
               {i > 0 ? <Divider /> : null}
               <AnnouncementItem item={a} />
               <Row gap={8} style={{ marginBottom: 14 }}>
-                <Button size="sm" variant="secondary" icon={a.pinned ? 'pin' : 'pin-outline'} title={a.pinned ? 'Unpin' : 'Pin'} onPress={() => actions.updateAnnouncement(a.id, { pinned: !a.pinned })} />
-                <Button size="sm" variant="danger" icon="trash-outline" title="Delete" onPress={() => confirmAction('Delete announcement?', a.title, () => actions.deleteAnnouncement(a.id), 'Delete')} />
+                <Button size="sm" variant="outline" icon={a.pinned ? 'pin' : 'pin-outline'} title={a.pinned ? 'Unpin' : 'Pin'} onPress={() => actions.updateAnnouncement(a.id, { pinned: !a.pinned })} />
+                <Button size="sm" variant="ghost" icon="trash-outline" title="Delete" onPress={() => confirmAction('Delete announcement?', a.title, () => actions.deleteAnnouncement(a.id), 'Delete')} />
               </Row>
             </View>
           ))}

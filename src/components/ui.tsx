@@ -1,6 +1,6 @@
 /**
- * UI kit. Quiet surfaces, hairline separators, charcoal primary actions,
- * the accent reserved for selection and progress.
+ * UI kit for the New Orleans design. Every component reads the active tone
+ * (ivory or midnight) from ToneProvider, so the same pieces work on both.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -13,30 +13,29 @@ import {
   TextInput,
   View,
   type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   type ScrollViewProps,
   type StyleProp,
   type TextInputProps,
   type ViewProps,
   type ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, elevation, font, gutter, radius, space } from '@/theme';
+import { font, gutter, palette, radius, shadow } from '@/theme';
+import { useScheme } from '@/theme/ToneContext';
+import type { PhotoKey } from '@/data/photos';
 import { initials } from '@/utils/format';
 import { PressScale } from './Motion';
+import { Photo } from './Photo';
 import { T } from './Text';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
 export const hairline = StyleSheet.hairlineWidth;
 
-/* ───────────────────────── Layout ───────────────────────── */
+/* ───────────────────────── Basics ───────────────────────── */
 
-/** Sets the status bar style only while this screen is focused (tabs stay mounted). */
 export function FocusStatusBar({ style }: { style: 'light' | 'dark' }) {
   const focused = useIsFocused();
   return focused ? <StatusBar style={style} /> : null;
@@ -48,75 +47,60 @@ export const Row = ({ children, style, gap = 8, ...rest }: ViewProps & { gap?: n
   </View>
 );
 
-export const Divider = ({ inset = 0, style }: { inset?: number; style?: StyleProp<ViewStyle> }) => (
-  <View style={[{ height: hairline, backgroundColor: color.line, marginLeft: inset }, style]} />
+export function Divider({ inset = 0, style }: { inset?: number; style?: StyleProp<ViewStyle> }) {
+  const s = useScheme();
+  return <View style={[{ height: hairline, backgroundColor: s.line, marginLeft: inset }, style]} />;
+}
+
+/** Gold fleur-de-lis accent. */
+export const Fleur = ({ size = 18, color = palette.gold }: { size?: number; color?: string }) => (
+  <MaterialCommunityIcons name="fleur-de-lis" size={size} color={color} accessibilityElementsHidden importantForAccessibility="no" />
 );
 
-/**
- * Tab-level screen with an iOS-style large title. As you scroll, a compact
- * title bar fades in with a hairline under it.
- */
-export function LargeTitleScreen({
-  title,
-  subtitle,
-  right,
-  children,
-  contentStyle,
-  showDemo = true,
-  ...rest
-}: ScrollViewProps & {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-  contentStyle?: StyleProp<ViewStyle>;
-  showDemo?: boolean;
-}) {
-  const insets = useSafeAreaInsets();
-  const y = useRef(new Animated.Value(0)).current;
-  const barOpacity = y.interpolate({ inputRange: [24, 56], outputRange: [0, 1], extrapolate: 'clamp' });
-  const titleScale = y.interpolate({ inputRange: [-80, 0], outputRange: [1.08, 1], extrapolate: 'clamp' });
-
+/** "BYTAI COMMUNITY" wordmark with fleur-de-lis. */
+export function Wordmark({ color = palette.ivory, size = 1 }: { color?: string; size?: number }) {
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
-      <FocusStatusBar style="dark" />
-      <Animated.ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={16}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y } } }], { useNativeDriver: true })}
-        {...rest}
-        contentContainerStyle={[{ paddingTop: insets.top + 12, paddingBottom: 48 }, contentStyle]}
-      >
-        <View style={{ paddingHorizontal: gutter, marginBottom: 20 }}>
-          <Row style={{ justifyContent: 'space-between', minHeight: 40 }}>
-            {showDemo ? <DemoBadge /> : <View />}
-            <Row gap={10}>{right}</Row>
-          </Row>
-          <Animated.View style={{ marginTop: 14, transform: [{ scale: titleScale }], transformOrigin: 'left' } as never}>
-            <T v="largeTitle" accessibilityRole="header">
-              {title}
-            </T>
-          </Animated.View>
-          {subtitle ? (
-            <T v="callout" muted style={{ marginTop: 6, maxWidth: 340 }}>
-              {subtitle}
-            </T>
-          ) : null}
-        </View>
-        {children}
-      </Animated.ScrollView>
+    <Row gap={8 * size} accessible accessibilityRole="header" accessibilityLabel="ByTAI Community">
+      <View>
+        <T c={color} style={{ fontFamily: font.serifSemi, fontSize: 21 * size, lineHeight: 24 * size, letterSpacing: 4 * size }}>
+          BYTAI
+        </T>
+        <T c={color} style={{ fontFamily: font.textMedium, fontSize: 7.5 * size, lineHeight: 10 * size, letterSpacing: 3.4 * size, marginTop: 1 }}>
+          COMMUNITY
+        </T>
+      </View>
+      <Fleur size={24 * size} />
+    </Row>
+  );
+}
 
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.compactBar, { paddingTop: insets.top, height: insets.top + 48, opacity: barOpacity }]}
-      >
-        <T v="headline">{title}</T>
-      </Animated.View>
+/* ───────────────────────── Screens ───────────────────────── */
+
+/** Header for tab screens: serif title + fleur, optional right action. */
+export function TabHeader({ title, right, subtitle }: { title: string; right?: React.ReactNode; subtitle?: string }) {
+  const s = useScheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingTop: insets.top + 10, paddingHorizontal: gutter, paddingBottom: 14, backgroundColor: s.bg }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Row gap={10}>
+          <T v="display" accessibilityRole="header">
+            {title}
+          </T>
+          <Fleur size={22} />
+        </Row>
+        <Row gap={10}>{right}</Row>
+      </Row>
+      {subtitle ? (
+        <T v="callout" muted style={{ marginTop: 4 }}>
+          {subtitle}
+        </T>
+      ) : null}
     </View>
   );
 }
 
-/** Plain scrolling screen for pushed/modal routes, with a top navigation bar. */
+/** Pushed/modal screen with a nav bar and scrolling body. */
 export function Screen({
   children,
   title,
@@ -124,28 +108,20 @@ export function Screen({
   close,
   contentStyle,
   bottom,
+  padded = true,
   ...rest
-}: ScrollViewProps & {
-  title?: string;
-  right?: React.ReactNode;
-  close?: boolean;
-  contentStyle?: StyleProp<ViewStyle>;
-  bottom?: React.ReactNode;
-}) {
+}: ScrollViewProps & { title?: string; right?: React.ReactNode; close?: boolean; contentStyle?: StyleProp<ViewStyle>; bottom?: React.ReactNode; padded?: boolean }) {
+  const s = useScheme();
   const insets = useSafeAreaInsets();
-  const [scrolled, setScrolled] = useState(false);
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => setScrolled(e.nativeEvent.contentOffset.y > 4);
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
-      <FocusStatusBar style="dark" />
-      <NavBar title={title} right={right} close={close} divider={scrolled} />
+    <View style={{ flex: 1, backgroundColor: s.bg }}>
+      <FocusStatusBar style={s.tone === 'dark' ? 'light' : 'dark'} />
+      <NavBar title={title} right={right} close={close} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={32}
-        onScroll={onScroll}
         {...rest}
-        contentContainerStyle={[{ paddingHorizontal: gutter, paddingBottom: (bottom ? 120 : 40) + insets.bottom }, contentStyle]}
+        contentContainerStyle={[padded && { paddingHorizontal: gutter }, { paddingBottom: (bottom ? 120 : 40) + insets.bottom }, contentStyle]}
       >
         {children}
       </ScrollView>
@@ -154,32 +130,16 @@ export function Screen({
   );
 }
 
-export function NavBar({
-  title,
-  right,
-  close,
-  divider,
-  onBack,
-}: {
-  title?: string;
-  right?: React.ReactNode;
-  close?: boolean;
-  divider?: boolean;
-  onBack?: () => void;
-}) {
+export function NavBar({ title, right, close, onBack }: { title?: string; right?: React.ReactNode; close?: boolean; onBack?: () => void }) {
+  const s = useScheme();
   const insets = useSafeAreaInsets();
   const back = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
   return (
-    <View
-      style={[
-        styles.nav,
-        { paddingTop: insets.top + 4, borderBottomColor: divider ? color.line : 'transparent' },
-      ]}
-    >
-      <IconButton icon={close ? 'close' : 'chevron-back'} label={close ? 'Close' : 'Back'} onPress={back} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: insets.top + 4, paddingHorizontal: 12, paddingBottom: 8, backgroundColor: s.bg }}>
+      <IconButton icon={close ? 'close' : 'arrow-back'} label={close ? 'Close' : 'Back'} onPress={back} tone="ghost" />
       <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 8 }}>
         {title ? (
-          <T v="headline" numberOfLines={1} accessibilityRole="header">
+          <T v="title2" numberOfLines={1} accessibilityRole="header" style={{ fontSize: 19 }}>
             {title}
           </T>
         ) : null}
@@ -189,11 +149,24 @@ export function NavBar({
   );
 }
 
-/** Sticky action bar pinned above the home indicator. */
 export function BottomBar({ children }: { children: React.ReactNode }) {
+  const s = useScheme();
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
+    <View
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: gutter,
+        paddingTop: 12,
+        paddingBottom: Math.max(insets.bottom, 12) + 4,
+        backgroundColor: s.bg,
+        borderTopWidth: hairline,
+        borderTopColor: s.line,
+      }}
+    >
       {children}
     </View>
   );
@@ -201,17 +174,18 @@ export function BottomBar({ children }: { children: React.ReactNode }) {
 
 /* ───────────────────────── Controls ───────────────────────── */
 
-type ButtonVariant = 'primary' | 'accent' | 'secondary' | 'tertiary' | 'danger' | 'light';
+type ButtonVariant = 'gold' | 'purple' | 'dark' | 'outline' | 'ghost' | 'ivory';
 
 export function Button({
   title,
   onPress,
-  variant = 'primary',
+  variant = 'purple',
   icon,
   iconRight,
   loading,
   disabled,
   size = 'lg',
+  caps,
   style,
   accessibilityLabel,
 }: {
@@ -223,18 +197,20 @@ export function Button({
   loading?: boolean;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  caps?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }) {
-  const palette: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
-    primary: { bg: color.ink, fg: color.white },
-    accent: { bg: color.accent, fg: color.white },
-    secondary: { bg: color.surface, fg: color.ink, border: color.lineStrong },
-    tertiary: { bg: 'transparent', fg: color.ink },
-    danger: { bg: color.dangerSoft, fg: color.danger },
-    light: { bg: color.white, fg: color.ink },
+  const s = useScheme();
+  const map: Record<ButtonVariant, { bg: string; fg: string; border?: string }> = {
+    gold: { bg: palette.gold, fg: palette.midnight },
+    purple: { bg: palette.purple, fg: palette.ivory },
+    dark: { bg: palette.midnight, fg: palette.ivory },
+    ivory: { bg: palette.ivory, fg: palette.midnight },
+    outline: { bg: 'transparent', fg: s.ink, border: s.tone === 'dark' ? palette.gold : s.line },
+    ghost: { bg: 'transparent', fg: s.accentText },
   };
-  const c = palette[variant];
+  const c = map[variant];
   const h = size === 'lg' ? 54 : size === 'md' ? 44 : 34;
   return (
     <PressScale
@@ -247,14 +223,14 @@ export function Button({
       style={[
         {
           height: h,
-          borderRadius: size === 'sm' ? radius.pill : radius.md + 2,
+          borderRadius: radius.pill,
           backgroundColor: c.bg,
-          paddingHorizontal: size === 'sm' ? 14 : 20,
+          paddingHorizontal: size === 'sm' ? 14 : 22,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          opacity: disabled ? 0.38 : 1,
+          opacity: disabled ? 0.4 : 1,
           borderWidth: c.border ? 1 : 0,
           borderColor: c.border,
         },
@@ -266,7 +242,7 @@ export function Button({
       ) : (
         <>
           {icon ? <Ionicons name={icon} size={size === 'sm' ? 15 : 18} color={c.fg} /> : null}
-          <T v={size === 'sm' ? 'subhead' : 'headline'} c={c.fg} style={size === 'sm' ? { fontFamily: font.textSemi } : undefined}>
+          <T v={size === 'sm' ? 'subhead' : 'button'} c={c.fg} style={[caps && { letterSpacing: 1.6, textTransform: 'uppercase', fontSize: 13.5 }, size === 'sm' && { fontFamily: font.textSemi }]}>
             {title}
           </T>
           {iconRight ? <Ionicons name={iconRight} size={size === 'sm' ? 15 : 18} color={c.fg} /> : null}
@@ -283,40 +259,40 @@ export function IconButton({
   badge,
   tone = 'plain',
   size = 40,
+  color,
 }: {
   icon: IconName;
   onPress?: () => void;
   label: string;
   badge?: number;
-  tone?: 'plain' | 'glass' | 'ghost' | 'dark';
+  tone?: 'plain' | 'glass' | 'ghost';
   size?: number;
+  color?: string;
 }) {
-  const bg = { plain: color.surface, glass: 'rgba(255,255,255,0.92)', ghost: 'transparent', dark: 'rgba(20,20,22,0.38)' }[tone];
-  const fg = tone === 'dark' ? color.white : color.ink;
+  const s = useScheme();
+  const bg = { plain: s.surface, glass: 'rgba(16,17,21,0.42)', ghost: 'transparent' }[tone];
+  const fg = color ?? (tone === 'glass' ? palette.ivory : s.ink);
   return (
     <PressScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={badge ? `${label}, ${badge} unread` : label}
       hitSlop={6}
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderWidth: tone === 'plain' ? hairline : 0,
-          borderColor: color.line,
-        },
-        tone === 'glass' && elevation.soft,
-      ]}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: bg,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: tone === 'plain' ? hairline : 0,
+        borderColor: s.line,
+      }}
     >
-      <Ionicons name={icon} size={size * 0.48} color={fg} />
+      <Ionicons name={icon} size={size * 0.52} color={fg} />
       {badge ? (
         <View style={styles.badge}>
-          <T v="caption" c={color.white} style={{ fontFamily: font.textSemi, fontSize: 10, lineHeight: 12 }}>
+          <T c={palette.midnight} style={{ fontFamily: font.textSemi, fontSize: 10, lineHeight: 12 }}>
             {badge > 9 ? '9+' : badge}
           </T>
         </View>
@@ -325,21 +301,30 @@ export function IconButton({
   );
 }
 
-export function Chip({ label, selected, onPress, icon, count }: { label: string; selected?: boolean; onPress?: () => void; icon?: IconName; count?: number }) {
+/** Filter pill. Selected = champagne gold on dark, midnight on ivory. */
+export function Pill({ label, selected, onPress, icon, count, style }: { label: string; selected?: boolean; onPress?: () => void; icon?: IconName; count?: number; style?: StyleProp<ViewStyle> }) {
+  const s = useScheme();
+  const darkTone = s.tone === 'dark';
+  const on = darkTone ? { bg: palette.gold, fg: palette.midnight } : { bg: palette.midnight, fg: palette.ivory };
+  const off = darkTone ? { bg: palette.charcoal, fg: palette.ivory, border: '#3A3B43' } : { bg: palette.paper, fg: palette.midnight, border: s.line };
+  const c = selected ? on : off;
   return (
     <PressScale
       onPress={onPress}
       haptic
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
-      style={[styles.chip, selected ? styles.chipOn : null]}
+      style={[
+        { height: 34, paddingHorizontal: 16, borderRadius: radius.pill, backgroundColor: c.bg, borderWidth: selected ? 0 : 1, borderColor: (c as { border?: string }).border, flexDirection: 'row', alignItems: 'center', gap: 6 },
+        style,
+      ]}
     >
-      {icon ? <Ionicons name={icon} size={14} color={selected ? color.white : color.ink2} /> : null}
-      <T v="subhead" c={selected ? color.white : color.ink2}>
+      {icon ? <Ionicons name={icon} size={14} color={c.fg} /> : null}
+      <T v="subhead" c={c.fg} style={selected ? { fontFamily: font.textSemi } : undefined}>
         {label}
       </T>
       {count != null ? (
-        <T v="caption" c={selected ? 'rgba(255,255,255,0.7)' : color.muted}>
+        <T v="caption" c={c.fg} style={{ opacity: 0.6 }}>
           {count}
         </T>
       ) : null}
@@ -347,61 +332,42 @@ export function Chip({ label, selected, onPress, icon, count }: { label: string;
   );
 }
 
-export function ChipRow({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function PillRow({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={style}
-      contentContainerStyle={{ paddingHorizontal: gutter, gap: 8 }}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={style} contentContainerStyle={{ paddingHorizontal: gutter, gap: 8 }}>
       {children}
     </ScrollView>
   );
 }
 
-/** iOS-style segmented control with a sliding thumb. */
-export function Segmented<V extends string>({
-  options,
-  value,
-  onChange,
-  style,
-}: {
-  options: { value: V; label: string }[];
-  value: V;
-  onChange: (v: V) => void;
-  style?: StyleProp<ViewStyle>;
-}) {
+/** Two/three-way toggle with a sliding thumb. */
+export function Segmented<V extends string>({ options, value, onChange, style }: { options: { value: V; label: string }[]; value: V; onChange: (v: V) => void; style?: StyleProp<ViewStyle> }) {
+  const s = useScheme();
   const [w, setW] = useState(0);
   const idx = Math.max(0, options.findIndex((o) => o.value === value));
   const x = useRef(new Animated.Value(idx)).current;
   useEffect(() => {
     Animated.spring(x, { toValue: idx, useNativeDriver: true, speed: 22, bounciness: 4 }).start();
   }, [idx, x]);
-  const seg = w ? (w - 6) / options.length : 0;
+  const seg = w ? (w - 8) / options.length : 0;
+  const thumb = s.tone === 'dark' ? palette.gold : palette.midnight;
   return (
-    <View style={[styles.segTrack, style]} onLayout={(e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width)} accessibilityRole="tablist">
+    <View
+      style={[{ flexDirection: 'row', padding: 4, borderRadius: radius.pill, backgroundColor: s.tone === 'dark' ? palette.charcoal : palette.paper, borderWidth: hairline, borderColor: s.line }, style]}
+      onLayout={(e: LayoutChangeEvent) => setW(e.nativeEvent.layout.width)}
+      accessibilityRole="tablist"
+    >
       {seg ? (
         <Animated.View
-          style={[
-            styles.segThumb,
-            { width: seg, transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, seg] }) }] },
-          ]}
+          style={{ position: 'absolute', top: 4, left: 4, bottom: 4, width: seg, borderRadius: radius.pill, backgroundColor: thumb, transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, seg] }) }] }}
         />
       ) : null}
       {options.map((o) => {
         const on = o.value === value;
+        const fg = on ? (s.tone === 'dark' ? palette.midnight : palette.ivory) : s.ink;
         return (
-          <PressScale
-            key={o.value}
-            haptic
-            scaleTo={0.98}
-            onPress={() => onChange(o.value)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
-            style={{ flex: 1, height: 34, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <T v="subhead" c={on ? color.ink : color.muted} style={on ? { fontFamily: font.textSemi } : undefined}>
+          <PressScale key={o.value} haptic scaleTo={0.98} onPress={() => onChange(o.value)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={{ flex: 1, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+            <T v="subhead" c={fg} style={on ? { fontFamily: font.textSemi } : undefined}>
               {o.label}
             </T>
           </PressScale>
@@ -411,22 +377,24 @@ export function Segmented<V extends string>({
   );
 }
 
-export function SearchField({ value, onChangeText, placeholder }: { value: string; onChangeText: (t: string) => void; placeholder: string }) {
+export function SearchField({ value, onChangeText, placeholder, autoFocus }: { value: string; onChangeText: (t: string) => void; placeholder: string; autoFocus?: boolean }) {
+  const s = useScheme();
   return (
-    <Row gap={10} style={styles.search}>
-      <Ionicons name="search" size={17} color={color.muted} />
+    <Row gap={10} style={{ height: 46, marginHorizontal: gutter, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: s.surface, borderWidth: hairline, borderColor: s.line }}>
+      <Ionicons name="search" size={17} color={s.muted} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={color.muted}
+        placeholderTextColor={s.muted}
+        autoFocus={autoFocus}
         returnKeyType="search"
         accessibilityLabel={placeholder}
-        style={{ flex: 1, fontFamily: font.text, fontSize: 15.5, color: color.ink, height: 44 }}
+        style={{ flex: 1, fontFamily: font.text, fontSize: 15, color: s.ink, height: 44 }}
       />
       {value ? (
         <PressScale onPress={() => onChangeText('')} hitSlop={10} accessibilityLabel="Clear search" accessibilityRole="button">
-          <Ionicons name="close-circle" size={18} color={color.faint} />
+          <Ionicons name="close-circle" size={18} color={s.faint} />
         </PressScale>
       ) : null}
     </Row>
@@ -434,14 +402,15 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
 }
 
 export function Field({ label, hint, style, ...rest }: TextInputProps & { label: string; hint?: string }) {
+  const s = useScheme();
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: 18 }}>
-      <T v="subhead" c={color.ink2} style={{ marginBottom: 8 }}>
+      <T v="subhead" muted style={{ marginBottom: 8 }}>
         {label}
       </T>
       <TextInput
-        placeholderTextColor={color.faint}
+        placeholderTextColor={s.faint}
         accessibilityLabel={label}
         {...rest}
         onFocus={(e) => {
@@ -453,9 +422,8 @@ export function Field({ label, hint, style, ...rest }: TextInputProps & { label:
           rest.onBlur?.(e);
         }}
         style={[
-          styles.input,
-          focused && { borderColor: color.ink, backgroundColor: color.surface },
-          rest.editable === false && { color: color.muted, backgroundColor: color.surfaceAlt },
+          { minHeight: 52, borderRadius: radius.md, borderWidth: 1, borderColor: focused ? (s.tone === 'dark' ? palette.gold : palette.purple) : s.line, backgroundColor: s.surface, paddingHorizontal: 16, fontFamily: font.text, fontSize: 16, color: s.ink },
+          rest.editable === false && { color: s.muted, backgroundColor: s.surface2 },
           rest.multiline && { minHeight: 112, textAlignVertical: 'top', paddingTop: 14 },
           style,
         ]}
@@ -470,6 +438,7 @@ export function Field({ label, hint, style, ...rest }: TextInputProps & { label:
 }
 
 export function Toggle({ label, description, value, onChange }: { label: string; description?: string; value: boolean; onChange: (v: boolean) => void }) {
+  const s = useScheme();
   return (
     <Row gap={12} style={{ paddingVertical: 12 }}>
       <View style={{ flex: 1 }}>
@@ -480,19 +449,13 @@ export function Toggle({ label, description, value, onChange }: { label: string;
           </T>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: color.accent, false: color.sunken }}
-        thumbColor={color.white}
-        ios_backgroundColor={color.sunken}
-        accessibilityLabel={label}
-      />
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: s.tone === 'dark' ? palette.gold : palette.purple, false: s.surface2 }} thumbColor={palette.white} ios_backgroundColor={s.surface2} accessibilityLabel={label} />
     </Row>
   );
 }
 
 export function Stepper({ value, onChange, min = 0, max = 10, label = 'Value' }: { value: number; onChange: (n: number) => void; min?: number; max?: number; label?: string }) {
+  const s = useScheme();
   const btn = (icon: IconName, next: number, disabled: boolean, a11y: string) => (
     <PressScale
       haptic
@@ -500,9 +463,9 @@ export function Stepper({ value, onChange, min = 0, max = 10, label = 'Value' }:
       accessibilityRole="button"
       accessibilityLabel={a11y}
       accessibilityState={{ disabled }}
-      style={[styles.stepBtn, disabled && { opacity: 0.35 }]}
+      style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: s.line, backgroundColor: s.surface, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.35 : 1 }}
     >
-      <Ionicons name={icon} size={17} color={color.ink} />
+      <Ionicons name={icon} size={17} color={s.ink} />
     </PressScale>
   );
   return (
@@ -518,32 +481,21 @@ export function Stepper({ value, onChange, min = 0, max = 10, label = 'Value' }:
 
 /* ───────────────────────── Display ───────────────────────── */
 
-export function SectionHeader({
-  title,
-  action,
-  onAction,
-  style,
-  caption,
-}: {
-  title: string;
-  action?: string;
-  onAction?: () => void;
-  style?: StyleProp<ViewStyle>;
-  caption?: string;
-}) {
+export function SectionHeader({ title, action, onAction, style, caption }: { title: string; action?: string; onAction?: () => void; style?: StyleProp<ViewStyle>; caption?: string }) {
+  const s = useScheme();
   return (
-    <View style={[{ paddingHorizontal: gutter, marginTop: 36, marginBottom: 14 }, style]}>
+    <View style={[{ paddingHorizontal: gutter, marginTop: 30, marginBottom: 14 }, style]}>
       <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <T v="title2" accessibilityRole="header">
           {title}
         </T>
         {action ? (
           <PressScale onPress={onAction} hitSlop={10} accessibilityRole="button" accessibilityLabel={`${action}: ${title}`}>
-            <Row gap={2}>
-              <T v="calloutMedium" c={color.ink2}>
+            <Row gap={4}>
+              <T v="calloutMedium" c={s.ink}>
                 {action}
               </T>
-              <Ionicons name="chevron-forward" size={15} color={color.ink2} />
+              <Ionicons name="arrow-forward" size={14} color={s.ink} />
             </Row>
           </PressScale>
         ) : null}
@@ -557,20 +509,21 @@ export function SectionHeader({
   );
 }
 
-/** Inset grouped container (iOS Settings style). */
-export function Group({ children, style, title }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; title?: string }) {
+/** Container for list rows with hairline separators. */
+export function Group({ children, style, title, card = true }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; title?: string; card?: boolean }) {
+  const s = useScheme();
   const items = React.Children.toArray(children).filter(Boolean);
   return (
     <View style={[{ marginHorizontal: gutter }, style]}>
       {title ? (
-        <T v="overline" muted style={{ marginBottom: 8, marginLeft: 4 }}>
+        <T v="eyebrow" muted style={{ marginBottom: 10, marginLeft: 2 }}>
           {title}
         </T>
       ) : null}
-      <View style={styles.group}>
+      <View style={card ? { backgroundColor: s.surface, borderRadius: radius.lg, overflow: 'hidden', borderWidth: hairline, borderColor: s.line } : undefined}>
         {items.map((child, i) => (
           <View key={i}>
-            {i > 0 ? <Divider inset={16} /> : null}
+            {i > 0 ? <Divider inset={card ? 16 : 0} /> : null}
             {child}
           </View>
         ))}
@@ -589,6 +542,7 @@ export function ListItem({
   trailing,
   destructive,
   accessibilityLabel,
+  padded = true,
 }: {
   icon?: IconName;
   title: string;
@@ -599,16 +553,15 @@ export function ListItem({
   trailing?: React.ReactNode;
   destructive?: boolean;
   accessibilityLabel?: string;
+  padded?: boolean;
 }) {
+  const s = useScheme();
+  const fg = destructive ? (s.tone === 'dark' ? palette.gold : palette.purple) : s.ink;
   const body = (
-    <Row gap={14} style={{ paddingHorizontal: 16, paddingVertical: 13, minHeight: 52 }}>
-      {leading ?? (icon ? (
-        <View style={styles.listIcon}>
-          <Ionicons name={icon} size={18} color={destructive ? color.danger : color.ink} />
-        </View>
-      ) : null)}
+    <Row gap={14} style={{ paddingHorizontal: padded ? 16 : 0, paddingVertical: 13, minHeight: 54 }}>
+      {leading ?? (icon ? <Ionicons name={icon} size={20} color={fg} style={{ width: 24 }} /> : null)}
       <View style={{ flex: 1 }}>
-        <T v="bodyMedium" c={destructive ? color.danger : color.ink} numberOfLines={1}>
+        <T v="bodyMedium" c={fg} numberOfLines={1}>
           {title}
         </T>
         {subtitle ? (
@@ -622,7 +575,7 @@ export function ListItem({
           {value}
         </T>
       ) : null}
-      {trailing ?? (onPress && !destructive ? <Ionicons name="chevron-forward" size={17} color={color.faint} /> : null)}
+      {trailing ?? (onPress && !destructive ? <Ionicons name="chevron-forward" size={17} color={s.faint} /> : null)}
     </Row>
   );
   return onPress ? (
@@ -634,146 +587,130 @@ export function ListItem({
   );
 }
 
-export function Avatar({ name, size = 44, tone = 'neutral' }: { name: string; size?: number; tone?: 'neutral' | 'dark' | 'accent' }) {
-  const bg = { neutral: color.sunken, dark: color.ink, accent: color.accentSoft }[tone];
-  const fg = { neutral: color.ink2, dark: color.white, accent: color.accent }[tone];
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel={name}>
-      <T c={fg} style={{ fontFamily: font.textSemi, fontSize: size * 0.36, lineHeight: size * 0.44 }}>
+export function Avatar({ name, size = 44, photo, ring }: { name: string; size?: number; photo?: PhotoKey; ring?: boolean }) {
+  const s = useScheme();
+  const inner = photo ? (
+    <Photo photo={photo} width={size * 3} decorative style={{ width: size, height: size, borderRadius: size / 2 }} />
+  ) : (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: s.tone === 'dark' ? palette.charcoal2 : palette.purple, alignItems: 'center', justifyContent: 'center' }}>
+      <T c={s.tone === 'dark' ? palette.gold : palette.ivory} style={{ fontFamily: font.textSemi, fontSize: size * 0.36, lineHeight: size * 0.44 }}>
         {initials(name)}
       </T>
     </View>
   );
+  return (
+    <View accessibilityLabel={name} style={ring ? { padding: 2, borderRadius: size, borderWidth: 1.5, borderColor: palette.gold } : undefined}>
+      {inner}
+    </View>
+  );
 }
 
-/** Overlapping avatar stack, e.g. "who's going". */
 export function AvatarStack({ names, size = 28 }: { names: string[]; size?: number }) {
+  const s = useScheme();
   return (
     <Row gap={0}>
       {names.slice(0, 4).map((n, i) => (
-        <View key={n + i} style={{ marginLeft: i ? -size * 0.32 : 0, borderRadius: size, borderWidth: 2, borderColor: color.bg }}>
-          <Avatar name={n} size={size} tone={i % 2 ? 'neutral' : 'accent'} />
+        <View key={n + i} style={{ marginLeft: i ? -size * 0.3 : 0, borderRadius: size, borderWidth: 2, borderColor: s.bg }}>
+          <Avatar name={n} size={size} />
         </View>
       ))}
     </Row>
   );
 }
 
-type TagTone = 'neutral' | 'accent' | 'danger' | 'warn' | 'onImage' | 'dark';
+type TagTone = 'gold' | 'purple' | 'lilac' | 'dark' | 'onImage' | 'neutral';
 
-export function Tag({ label, tone = 'neutral', icon }: { label: string; tone?: TagTone; icon?: IconName }) {
+export function Tag({ label, tone = 'gold', icon }: { label: string; tone?: TagTone; icon?: IconName }) {
+  const s = useScheme();
   const map: Record<TagTone, { bg: string; fg: string }> = {
-    neutral: { bg: color.surfaceAlt, fg: color.ink2 },
-    accent: { bg: color.accentSoft, fg: color.accent },
-    danger: { bg: color.dangerSoft, fg: color.danger },
-    warn: { bg: color.warnSoft, fg: color.warn },
-    onImage: { bg: 'rgba(255,255,255,0.92)', fg: color.ink },
-    dark: { bg: color.ink, fg: color.white },
+    gold: s.tone === 'dark' ? { bg: palette.gold, fg: palette.midnight } : { bg: palette.goldSoft, fg: '#6B4E1E' },
+    purple: { bg: palette.purple, fg: palette.ivory },
+    lilac: { bg: palette.lilac, fg: palette.purple },
+    dark: { bg: palette.midnight, fg: palette.gold },
+    onImage: { bg: 'rgba(16,17,21,0.62)', fg: palette.ivory },
+    neutral: { bg: s.surface2, fg: s.ink },
   };
   const c = map[tone];
   return (
-    <View style={[styles.tag, { backgroundColor: c.bg }]}>
+    <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: c.bg }}>
       {icon ? <Ionicons name={icon} size={11} color={c.fg} /> : null}
-      <T v="caption" c={c.fg} style={{ fontFamily: font.textSemi, fontSize: 11.5 }}>
+      <T c={c.fg} style={{ fontFamily: font.textSemi, fontSize: 10.5, lineHeight: 13, letterSpacing: 1.1, textTransform: 'uppercase' }}>
         {label}
       </T>
     </View>
   );
 }
 
-/** Thin progress line. */
-export function Progress({ value, tone = 'accent', height = 4 }: { value: number; tone?: 'accent' | 'ink' | 'danger' | 'light'; height?: number }) {
+export function Progress({ value, height = 4 }: { value: number; height?: number }) {
+  const s = useScheme();
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(v, { toValue: Math.max(0, Math.min(1, value)), duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
   }, [value, v]);
-  const fill = { accent: color.accent, ink: color.ink, danger: color.danger, light: color.white }[tone];
-  const track = tone === 'light' ? 'rgba(255,255,255,0.25)' : color.sunken;
+  const fill = s.tone === 'dark' ? palette.gold : palette.purple;
   return (
-    <View
-      style={{ height, borderRadius: height, backgroundColor: track, overflow: 'hidden' }}
-      accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
-    >
+    <View style={{ height, borderRadius: height, backgroundColor: s.surface2, overflow: 'hidden' }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}>
       <Animated.View style={{ height, borderRadius: height, backgroundColor: fill, width: v.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
     </View>
   );
 }
 
 export function EmptyState({ icon, title, body, action, onAction }: { icon: IconName; title: string; body: string; action?: string; onAction?: () => void }) {
+  const s = useScheme();
   return (
     <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 28 }}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name={icon} size={24} color={color.ink2} />
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: s.surface2, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={24} color={s.tone === 'dark' ? palette.gold : palette.purple} />
       </View>
-      <T v="title3" center style={{ marginTop: 16 }}>
+      <T v="title2" center style={{ marginTop: 16 }}>
         {title}
       </T>
       <T v="callout" muted center style={{ marginTop: 6, maxWidth: 280 }}>
         {body}
       </T>
-      {action ? <Button title={action} onPress={onAction} variant="secondary" size="md" style={{ marginTop: 20 }} /> : null}
+      {action ? <Button title={action} onPress={onAction} variant="outline" size="md" style={{ marginTop: 20 }} /> : null}
     </View>
   );
 }
 
-/** "ByTAI Demo" label shown across the app so prospects know it's a prototype. */
+/** "BYTAI DEMO" label so prospects know this is a portfolio prototype. */
 export function DemoBadge({ onImage }: { onImage?: boolean }) {
+  const s = useScheme();
+  const darkish = onImage || s.tone === 'dark';
   return (
-    <View
-      style={[styles.demo, onImage ? { backgroundColor: 'rgba(20,20,22,0.42)' } : { backgroundColor: color.surface, borderWidth: hairline, borderColor: color.line }]}
-      accessibilityLabel="ByTAI demo app"
-    >
-      <View style={styles.demoDot} />
-      <T v="caption" c={onImage ? color.white : color.ink2} style={{ fontFamily: font.textSemi, letterSpacing: 0.2 }}>
-        ByTAI Demo
+    <Row gap={6} style={{ paddingHorizontal: 10, height: 24, borderRadius: radius.pill, backgroundColor: darkish ? 'rgba(16,17,21,0.55)' : palette.paper, borderWidth: hairline, borderColor: darkish ? 'rgba(229,183,107,0.45)' : s.line }} accessibilityLabel="ByTAI demo app">
+      <Fleur size={11} />
+      <T c={darkish ? palette.ivory : palette.midnight} style={{ fontFamily: font.textSemi, fontSize: 9.5, lineHeight: 12, letterSpacing: 1.4 }}>
+        BYTAI DEMO
       </T>
-    </View>
+    </Row>
   );
 }
 
 export function Notice({ children, icon = 'information-circle-outline' }: { children: React.ReactNode; icon?: IconName }) {
+  const s = useScheme();
   return (
-    <Row gap={10} style={styles.notice}>
-      <Ionicons name={icon} size={18} color={color.ink2} style={{ alignSelf: 'flex-start', marginTop: 1 }} />
-      <T v="caption" c={color.ink2} style={{ flex: 1, fontSize: 12.5, lineHeight: 18 }}>
+    <Row gap={10} style={{ padding: 14, borderRadius: radius.md, backgroundColor: s.surface2, alignItems: 'flex-start' }}>
+      <Ionicons name={icon} size={18} color={s.tone === 'dark' ? palette.gold : palette.purple} />
+      <T v="caption" c={s.ink} style={{ flex: 1, fontSize: 12.5, lineHeight: 18 }}>
         {children}
       </T>
     </Row>
   );
 }
 
+/** Gold square tile with a dark icon (program cards). */
+export function IconTile({ icon, size = 40, tone = 'gold' }: { icon: IconName; size?: number; tone?: 'gold' | 'ivory' | 'dark' }) {
+  const bg = { gold: palette.gold, ivory: palette.ivory, dark: palette.charcoal }[tone];
+  const fg = tone === 'dark' ? palette.gold : palette.midnight;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Ionicons name={icon} size={size * 0.5} color={fg} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  compactBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(247,246,243,0.97)',
-    borderBottomWidth: hairline,
-    borderBottomColor: color.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-    backgroundColor: color.bg,
-    borderBottomWidth: hairline,
-  },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: gutter,
-    paddingTop: 12,
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    borderTopWidth: hairline,
-    borderTopColor: color.line,
-  },
   badge: {
     position: 'absolute',
     top: -2,
@@ -782,61 +719,12 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 4,
     borderRadius: 9,
-    backgroundColor: color.danger,
+    backgroundColor: palette.gold,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: color.white,
+    borderColor: palette.midnight,
   },
-  chip: {
-    height: 36,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    backgroundColor: color.surface,
-    borderWidth: hairline,
-    borderColor: color.lineStrong,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  chipOn: { backgroundColor: color.ink, borderColor: color.ink },
-  segTrack: { flexDirection: 'row', padding: 3, borderRadius: 12, backgroundColor: color.sunken },
-  segThumb: { position: 'absolute', top: 3, left: 3, bottom: 3, borderRadius: 9, backgroundColor: color.surface, ...elevation.soft },
-  search: {
-    height: 46,
-    marginHorizontal: gutter,
-    paddingHorizontal: 14,
-    borderRadius: radius.md,
-    backgroundColor: color.sunken,
-  },
-  input: {
-    minHeight: 52,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: color.line,
-    backgroundColor: color.surface,
-    paddingHorizontal: 16,
-    fontFamily: font.text,
-    fontSize: 16,
-    color: color.ink,
-  },
-  stepBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: color.lineStrong,
-    backgroundColor: color.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  group: { backgroundColor: color.surface, borderRadius: radius.lg, overflow: 'hidden', borderWidth: hairline, borderColor: color.line },
-  listIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: color.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  tag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: color.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  demo: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 26, borderRadius: radius.pill },
-  demoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.accent },
-  notice: { padding: 14, borderRadius: radius.md, backgroundColor: color.surfaceAlt },
 });
 
-export { space };
+export { shadow };

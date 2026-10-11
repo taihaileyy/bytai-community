@@ -1,51 +1,36 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, gutter, radius } from '@/theme';
+import { gutter, palette, radius } from '@/theme';
+import { ToneProvider } from '@/theme/ToneContext';
 import { T } from './Text';
-import { DemoBadge, FocusStatusBar, NavBar, Row } from './ui';
+import { Fleur, FocusStatusBar, NavBar, Row } from './ui';
 
-/** Shared shell for admin screens: nav bar, "Admin console" overline, large title. */
-export function AdminScreen({
-  title,
-  eyebrow = 'Admin console',
-  right,
-  root,
-  children,
-  bottom,
-}: {
-  title: string;
-  eyebrow?: string;
-  right?: React.ReactNode;
-  root?: boolean;
-  children: React.ReactNode;
-  bottom?: React.ReactNode;
-}) {
+/** Midnight shell for admin sub-pages. */
+export function AdminScreen({ title, eyebrow = 'Admin', right, children, bottom }: { title: string; eyebrow?: string; right?: React.ReactNode; children: React.ReactNode; bottom?: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: color.bg }}>
-      <FocusStatusBar style="dark" />
-      <NavBar close={root} right={right ?? <DemoBadge />} />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: (bottom ? 120 : 48) + insets.bottom }}
-      >
-        <View style={{ paddingHorizontal: gutter, paddingTop: 4, paddingBottom: 18 }}>
-          <Row gap={6}>
-            <View style={styles.adminDot} />
-            <T v="overline" muted>
-              {eyebrow}
+    <ToneProvider tone="dark">
+      <View style={{ flex: 1, backgroundColor: palette.midnight }}>
+        <FocusStatusBar style="light" />
+        <NavBar right={right} />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: (bottom ? 120 : 48) + insets.bottom }}>
+          <View style={{ paddingHorizontal: gutter, paddingBottom: 18 }}>
+            <Row gap={6}>
+              <Fleur size={12} />
+              <T v="eyebrow" c={palette.gold}>
+                {eyebrow}
+              </T>
+            </Row>
+            <T v="display" style={{ marginTop: 6 }} accessibilityRole="header">
+              {title}
             </T>
-          </Row>
-          <T v="largeTitle" style={{ marginTop: 6 }} accessibilityRole="header">
-            {title}
-          </T>
-        </View>
-        {children}
-      </ScrollView>
-      {bottom}
-    </View>
+          </View>
+          {children}
+        </ScrollView>
+        {bottom}
+      </View>
+    </ToneProvider>
   );
 }
 
@@ -54,13 +39,5 @@ export function Panel({ children, style }: { children: React.ReactNode; style?: 
 }
 
 const styles = StyleSheet.create({
-  adminDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.ink },
-  panel: {
-    marginHorizontal: gutter,
-    padding: 18,
-    borderRadius: radius.xl,
-    backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.line,
-  },
+  panel: { marginHorizontal: gutter, padding: 16, borderRadius: radius.lg, backgroundColor: palette.charcoal, borderWidth: StyleSheet.hairlineWidth, borderColor: '#33343C' },
 });

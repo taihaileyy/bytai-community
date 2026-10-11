@@ -7,7 +7,7 @@ import type { PhotoKey } from './photos';
 
 export type ID = string;
 
-export type ProgramCategory = 'Food' | 'Youth' | 'Learning' | 'Wellness' | 'Housing';
+export type ProgramCategory = 'Youth' | 'Housing' | 'Arts' | 'Workforce';
 
 export interface Program {
   id: ID;
@@ -23,8 +23,10 @@ export interface Program {
   lead: string;
   icon: string; // Ionicons glyph name
   photo: PhotoKey;
+  gallery: PhotoKey[];
   featured: boolean;
-  outcomes: string[];
+  /** "What you'll gain" tiles: label + Ionicons glyph. */
+  outcomes: { label: string; icon: string }[];
 }
 
 export type EventCategory = 'Volunteer' | 'Fundraiser' | 'Workshop' | 'Community';
@@ -42,6 +44,7 @@ export interface CommunityEvent {
   attending: number;
   host: string;
   photo: PhotoKey;
+  tags?: string[];
   featured: boolean;
   cancelled?: boolean;
 }

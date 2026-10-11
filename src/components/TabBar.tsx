@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, font } from '@/theme';
+import { font, palette } from '@/theme';
 import { PressScale } from './Motion';
 import { T } from './Text';
 
@@ -10,10 +10,10 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export const TABS: Record<string, { label: string; icon: IconName; active: IconName }> = {
   index: { label: 'Home', icon: 'home-outline', active: 'home' },
-  programs: { label: 'Programs', icon: 'compass-outline', active: 'compass' },
-  events: { label: 'Events', icon: 'calendar-clear-outline', active: 'calendar-clear' },
+  programs: { label: 'Programs', icon: 'grid-outline', active: 'grid' },
+  events: { label: 'Events', icon: 'calendar-outline', active: 'calendar' },
   give: { label: 'Give', icon: 'heart-outline', active: 'heart' },
-  account: { label: 'Profile', icon: 'person-outline', active: 'person' },
+  account: { label: 'More', icon: 'person-circle-outline', active: 'person-circle' },
 };
 
 type Props = {
@@ -22,7 +22,7 @@ type Props = {
   badges?: Record<string, number | undefined>;
 };
 
-/** Minimal bottom bar: icons + small labels, a soft pill behind the active tab. */
+/** Midnight bottom bar with champagne-gold active state. */
 export function TabBar({ state, navigation, badges = {} }: Props) {
   const insets = useSafeAreaInsets();
   return (
@@ -44,41 +44,24 @@ export function TabBar({ state, navigation, badges = {} }: Props) {
 function TabItem({ meta, focused, onPress, badge }: { meta: (typeof TABS)[string]; focused: boolean; onPress: () => void; badge?: number }) {
   const v = useRef(new Animated.Value(focused ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(v, { toValue: focused ? 1 : 0, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
+    Animated.spring(v, { toValue: focused ? 1 : 0, useNativeDriver: true, speed: 18, bounciness: 10 }).start();
   }, [focused, v]);
+  const color = focused ? palette.gold : '#8E8A83';
   return (
-    <PressScale
-      haptic
-      onPress={onPress}
-      scaleTo={0.92}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: focused }}
-      accessibilityLabel={badge ? `${meta.label}, ${badge} new` : meta.label}
-      style={styles.item}
-    >
-      <View style={styles.iconWrap}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.pill, { opacity: v, transform: [{ scaleX: v.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }]} />
-        <Ionicons name={focused ? meta.active : meta.icon} size={21} color={focused ? color.ink : color.muted} />
+    <PressScale haptic onPress={onPress} scaleTo={0.9} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={badge ? `${meta.label}, ${badge} new` : meta.label} style={styles.item}>
+      <Animated.View style={{ transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }, { scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }}>
+        <Ionicons name={focused ? meta.active : meta.icon} size={22} color={color} />
         {badge ? <View style={styles.badge} /> : null}
-      </View>
-      <T v="caption" c={focused ? color.ink : color.muted} style={{ fontSize: 10.5, marginTop: 3, fontFamily: focused ? font.textSemi : font.textMedium }}>
-        {meta.label}
-      </T>
+      </Animated.View>
+      <T style={{ fontSize: 10.5, lineHeight: 13, marginTop: 4, color, fontFamily: focused ? font.textSemi : font.textMedium }}>{meta.label}</T>
+      <Animated.View style={[styles.indicator, { opacity: v }]} />
     </PressScale>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row',
-    backgroundColor: color.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.line,
-    paddingTop: 8,
-    paddingHorizontal: 8,
-  },
+  bar: { flexDirection: 'row', backgroundColor: palette.midnight, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#2A2B31', paddingTop: 10, paddingHorizontal: 6 },
   item: { flex: 1, alignItems: 'center' },
-  iconWrap: { width: 54, height: 30, alignItems: 'center', justifyContent: 'center' },
-  pill: { borderRadius: 15, backgroundColor: color.surfaceAlt },
-  badge: { position: 'absolute', top: 4, right: 13, width: 8, height: 8, borderRadius: 4, backgroundColor: color.danger, borderWidth: 1.5, borderColor: color.surface },
+  badge: { position: 'absolute', top: -1, right: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: palette.gold, borderWidth: 1.5, borderColor: palette.midnight },
+  indicator: { marginTop: 5, width: 18, height: 2, borderRadius: 1, backgroundColor: palette.gold },
 });

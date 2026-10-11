@@ -10,8 +10,8 @@ import { DEMO_ADMIN_ID, DEMO_MEMBER_ID } from '@/data/seed';
 export type DemoRole = 'member' | 'admin';
 
 export const DEMO_ACCOUNTS: Record<DemoRole, { memberId: string; email: string; label: string }> = {
-  member: { memberId: DEMO_MEMBER_ID, email: 'jordan.ellis@example.org', label: 'Community member' },
-  admin: { memberId: DEMO_ADMIN_ID, email: 'avery@riverbend.example.org', label: 'Program director (admin)' },
+  member: { memberId: DEMO_MEMBER_ID, email: 'taylor.reed@example.org', label: 'Community member' },
+  admin: { memberId: DEMO_ADMIN_ID, email: 'avery@crescentcity.example.org', label: 'Program director (admin)' },
 };
 
 export async function demoSignIn(role: DemoRole): Promise<string> {
